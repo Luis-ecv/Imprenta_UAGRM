@@ -1,0 +1,126 @@
+# =============================================================================
+# .gitignore — Archivos y carpetas excluidos del control de versiones
+# Proyecto: Sistema Integral de Gestión y Predicción de Insumos
+# Imprenta Universitaria UAGRM
+# =============================================================================
+
+# =============================================
+# VARIABLES DE ENTORNO — NUNCA commitear valores reales
+# =============================================
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env
+
+# =============================================
+# PYTHON — Caché y compilados
+# =============================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+
+# Entornos virtuales de Python
+.venv/
+venv/
+env/
+ENV/
+.Python
+
+# Distribución y empaquetado
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+wheels/
+
+# Herramientas de testing y cobertura
+.pytest_cache/
+.coverage
+coverage/
+htmlcov/
+.tox/
+.nox/
+
+# Mypy y type checkers
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# =============================================
+# NODE.JS / FRONTEND
+# =============================================
+node_modules/
+frontend/node_modules/
+
+# Directorios de compilación del frontend
+frontend/dist/
+frontend/build/
+
+# Caché de Vite
+frontend/.vite/
+
+# =============================================
+# MACHINE LEARNING — Modelos entrenados (archivos binarios grandes)
+# =============================================
+ml_models/*.pkl
+ml_models/*.joblib
+ml_models/*.h5
+backend/ml_models/*.pkl
+backend/ml_models/*.joblib
+
+# =============================================
+# BASES DE DATOS — Datos persistentes locales
+# =============================================
+postgres_data/
+
+# =============================================
+# LOGS
+# =============================================
+*.log
+logs/
+*.log.*
+
+# =============================================
+# SISTEMA OPERATIVO
+# =============================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# =============================================
+# EDITORES E IDEs
+# =============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# =============================================
+# DOCKER — Datos locales
+# =============================================
+docker-compose.override.yml
+
+# =============================================
+# MISCELÁNEOS
+# =============================================
+*.bak
+*.tmp
+*.temp
+.cache/

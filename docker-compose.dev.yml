@@ -1,0 +1,46 @@
+# =============================================================================
+# docker-compose.dev.yml — Override para entorno de DESARROLLO
+# Uso: docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# Este archivo sobreescribe configuraciones específicas para desarrollo:
+#   - Expone el puerto de PostgreSQL para acceso directo (DBeaver, pgAdmin)
+#   - Activa hot reload en el backend (uvicorn --reload)
+#   - Activa el servidor de desarrollo de Vite en el frontend
+# =============================================================================
+
+version: "3.9"
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Override de Base de Datos — expone el puerto para herramientas externas
+  # ---------------------------------------------------------------------------
+  db:
+    ports:
+      # Puerto expuesto para conectar desde DBeaver, pgAdmin u otros clientes
+      - "5432:5432"
+
+  # ---------------------------------------------------------------------------
+  # Override de Backend — hot reload con uvicorn
+  # ---------------------------------------------------------------------------
+  backend:
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      # Monta el código fuente para reflejar cambios sin reconstruir la imagen
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+
+  # ---------------------------------------------------------------------------
+  # Override de Frontend — servidor de desarrollo de Vite
+  # ---------------------------------------------------------------------------
+  frontend:
+    command: npm run dev -- --host 0.0.0.0
+    volumes:
+      # Monta el código fuente para hot module replacement (HMR)
+      - ./frontend:/app
+      # Volumen anónimo para preservar node_modules del contenedor
+      - /app/node_modules
+    ports:
+      # Puerto estándar del servidor de desarrollo de Vite
+      - "5173:5173"

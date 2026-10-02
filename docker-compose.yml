@@ -1,0 +1,84 @@
+# =============================================================================
+# docker-compose.yml — Configuración de producción
+# Proyecto: Sistema Integral de Gestión y Predicción de Insumos
+# Imprenta Universitaria UAGRM
+# =============================================================================
+
+version: "3.9"
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Servicio de Base de Datos — PostgreSQL 16
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: imprenta_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      # Volumen persistente para los datos de la base de datos
+      - postgres_data:/var/lib/postgresql/data
+      # Carpeta con scripts SQL de inicialización (esquema + semilla)
+      - ./db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - imprenta_net
+
+  # ---------------------------------------------------------------------------
+  # Servicio de Backend — FastAPI / Python 3.11
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: imprenta_backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    networks:
+      - imprenta_net
+
+  # ---------------------------------------------------------------------------
+  # Servicio de Frontend — React 18 + Vite 5 (build estático servido por Nginx)
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: imprenta_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    networks:
+      - imprenta_net
+
+# =============================================================================
+# Volúmenes persistentes
+# =============================================================================
+volumes:
+  postgres_data:
+    name: imprenta_postgres_data
+
+# =============================================================================
+# Redes
+# =============================================================================
+networks:
+  imprenta_net:
+    driver: bridge
+    name: imprenta_net
