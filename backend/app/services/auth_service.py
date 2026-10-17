@@ -1,34 +1,41 @@
 """
 Servicio de Autenticación.
 Lógica de negocio para login y generación de tokens JWT.
-No conoce HTTP — lanza excepciones del dominio definidas en core/exceptions.py.
 """
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from app.config import settings
 from app.core.exceptions import CredencialesInvalidas
 from app.core.security import create_access_token, verify_password
+from app.models.usuario import Usuario
 from app.repositories.usuario_repository import UsuarioRepository
 from app.schemas.auth import LoginRequest, TokenResponse
 
 
 async def autenticar(db: AsyncSession, datos: LoginRequest) -> TokenResponse:
-    """
-    Verifica las credenciales del usuario y genera un token JWT.
+    repo = UsuarioRepository(db)
+    usuario = await repo.obtener_por_email(datos.email)
+    if not usuario or not usuario.activo:
+        raise CredencialesInvalidas()
 
-    Args:
-        db: Sesión de base de datos.
-        datos: Nombre de usuario y contraseña en texto plano.
+    if not verify_password(datos.password, usuario.password_hash):
+        raise CredencialesInvalidas()
 
-    Returns:
-        TokenResponse con el token JWT y su tiempo de expiración.
+    # Actualizar timestamp de último acceso
+    usuario.ultimo_acceso = datetime.now(timezone.utc)
+    await db.flush()
 
-    Raises:
-        CredencialesInvalidas: Si el usuario no existe o la contraseña no coincide.
-    """
-    # TODO: implementar
-    # 1. Buscar usuario por nombre_usuario usando UsuarioRepository
-    # 2. Verificar que esté activo
-    # 3. Verificar contraseña con verify_password
-    # 4. Construir payload JWT con {sub, rol, id}
-    # 5. Retornar TokenResponse con create_access_token
-    pass
+    # Payload para el JWT
+    payload = {
+        "sub": usuario.email,
+        "id_usuario": usuario.id_usuario,
+        "rol": usuario.rol.nombre if usuario.rol else "Cliente",
+        "nombre_completo": usuario.nombre_completo,
+    }
+
+    token = create_access_token(payload)
+    return TokenResponse(
+        access_token=token,
+        token_type="bearer",
+        expira_en_minutos=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
+    )

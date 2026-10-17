@@ -1,49 +1,66 @@
 """
-Schemas Pydantic para el módulo de Órdenes de Trabajo.
-Incluye schemas para la orden, cambio de estado e historial.
+Schemas Pydantic para Órdenes de Trabajo y Estados.
 """
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
-from typing import Optional
+from typing import List, Optional
+from pydantic import BaseModel, ConfigDict
 
-from pydantic import BaseModel
+
+class DetalleOrdenCreate(BaseModel):
+    formato_corte: str
+    tipo_encuadernacion: str
+    especificaciones_taller: Optional[str] = None
 
 
-class OrdenTrabajoBase(BaseModel):
-    cliente_id: int
-    descripcion: str
-    fecha_entrega: Optional[date] = None
+class DetalleOrdenResponse(DetalleOrdenCreate):
+    id_detalle_orden: int
+    orden_id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class HistorialEstadoResponse(BaseModel):
+    id_historial: int
+    orden_id: int
+    usuario_id: int
+    estado_anterior: str
+    estado_nuevo: str
+    fecha_cambio: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class OrdenTrabajoCreate(BaseModel):
+    proforma_id: int
+    fecha_compromiso: date
+    prioridad: str = "NORMAL"  # NORMAL | URGENTE
     observaciones: Optional[str] = None
-    proforma_id: Optional[int] = None
-
-
-class OrdenTrabajoCreate(OrdenTrabajoBase):
-    """Datos para crear una nueva orden de trabajo."""
-    pass
+    detalle_orden: DetalleOrdenCreate
 
 
 class OrdenTrabajoUpdate(BaseModel):
-    """Campos actualizables de una orden de trabajo."""
-
-    descripcion: Optional[str] = None
-    fecha_entrega: Optional[date] = None
+    fecha_compromiso: Optional[date] = None
+    prioridad: Optional[str] = None
     observaciones: Optional[str] = None
 
 
 class CambioEstadoOrden(BaseModel):
-    """Solicitud de cambio de estado de una orden de trabajo."""
-
-    nuevo_estado: str
-    observacion: Optional[str] = None
+    estado_nuevo: str
+    observaciones: Optional[str] = None
 
 
-class OrdenTrabajoResponse(OrdenTrabajoBase):
-    """Orden de trabajo completa retornada por la API."""
+class OrdenTrabajoResponse(BaseModel):
+    id_orden: int
+    proforma_id: int
+    usuario_id: int
+    codigo_ot: str
+    fecha_compromiso: date
+    prioridad: str
+    estado_actual: str
+    observaciones: Optional[str] = None
+    created_at: datetime
+    detalles_orden: List[DetalleOrdenResponse] = []
+    historial: List[HistorialEstadoResponse] = []
 
-    id: int
-    numero: str
-    estado: str
-    total: Decimal
-    fecha_inicio: Optional[date] = None
-
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)

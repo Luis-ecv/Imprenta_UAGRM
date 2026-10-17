@@ -1,6 +1,6 @@
 """
 Repositorio de Proformas.
-Queries SQLAlchemy para proformas y sus ítems de detalle.
+Queries SQLAlchemy para proforma y detalle_proforma.
 """
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,34 +12,25 @@ from app.repositories.base_repository import BaseRepository
 
 
 class ProformaRepository(BaseRepository[Proforma]):
-    """Repositorio para operaciones de base de datos sobre la entidad Proforma."""
-
     def __init__(self, db: AsyncSession):
         super().__init__(db, Proforma)
 
-    async def obtener_con_detalles(self, proforma_id: int) -> Proforma | None:
-        """Carga una proforma con sus ítems de detalle en una sola query (eager load)."""
+    async def obtener_con_detalles(self, id_proforma: int) -> Proforma | None:
         resultado = await self.db.execute(
             select(Proforma)
-            .options(selectinload(Proforma.detalles))
-            .where(Proforma.id == proforma_id)
+            .options(
+                selectinload(Proforma.detalles),
+                selectinload(Proforma.cliente),
+                selectinload(Proforma.usuario),
+            )
+            .where(Proforma.id_proforma == id_proforma)
         )
         return resultado.scalar_one_or_none()
 
-    async def obtener_ultimo_numero(self, anio: int) -> int:
-        """
-        Retorna el último número correlativo de proforma para el año indicado.
-        Usado para generar el próximo número (PROF-YYYY-NNNN).
-        """
-        # TODO: implementar query con MAX sobre el número del año
-        pass
-
-    async def agregar_detalle(self, detalle: DetalleProforma) -> DetalleProforma:
-        """Persiste un ítem de detalle y recalcula el total de la proforma."""
-        # TODO: implementar
-        pass
-
-    async def eliminar_detalle(self, detalle_id: int) -> None:
-        """Elimina un ítem de la proforma por su ID."""
-        # TODO: implementar
-        pass
+    async def obtener_por_codigo(self, codigo_proforma: str) -> Proforma | None:
+        resultado = await self.db.execute(
+            select(Proforma)
+            .options(selectinload(Proforma.detalles))
+            .where(Proforma.codigo_proforma == codigo_proforma)
+        )
+        return resultado.scalar_one_or_none()

@@ -1,40 +1,32 @@
 """
-Modelo SQLAlchemy para la tabla 'movimientos_inventario'.
-Registra cada entrada, salida o ajuste de stock de un insumo.
+Modelo SQLAlchemy para la tabla 'movimiento_inventario'.
 """
+from datetime import datetime
 from decimal import Decimal
-
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Numeric, String, Text
+from sqlalchemy import DateTime, ForeignKey, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
-
 from app.models.base import Base
 
 
 class MovimientoInventario(Base):
-    """Movimiento de stock de un insumo (ENTRADA, SALIDA o AJUSTE)."""
+    __tablename__ = "movimiento_inventario"
 
-    __tablename__ = "movimientos_inventario"
-    __table_args__ = (
-        CheckConstraint(
-            "tipo_movim IN ('ENTRADA', 'SALIDA', 'AJUSTE')",
-            name="ck_tipo_movim",
-        ),
+    id_movimiento: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    insumo_id: Mapped[int] = mapped_column(
+        ForeignKey("insumo.id_insumo", onupdate="CASCADE", ondelete="RESTRICT"), nullable=False
     )
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    insumo_id: Mapped[int] = mapped_column(ForeignKey("insumos.id"), nullable=False)
-    tipo_movim: Mapped[str] = mapped_column(String(20), nullable=False)
+    usuario_id: Mapped[int] = mapped_column(
+        ForeignKey("usuario.id_usuario", onupdate="CASCADE", ondelete="RESTRICT"), nullable=False
+    )
+    tipo_movimiento: Mapped[str] = mapped_column(String(40), nullable=False)
     cantidad: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
-    stock_anterior: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
-    stock_nuevo: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
-    motivo: Mapped[str | None] = mapped_column(Text, nullable=True)
-    usuario_id: Mapped[int | None] = mapped_column(
-        ForeignKey("usuarios.id"), nullable=True
-    )
-    fecha_hora: Mapped[DateTime] = mapped_column(
+    saldo_resultante: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    referencia: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
 
     # Relaciones
     insumo: Mapped["Insumo"] = relationship("Insumo", back_populates="movimientos")
+    usuario: Mapped["Usuario"] = relationship("Usuario", back_populates="movimientos")

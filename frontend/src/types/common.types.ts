@@ -1,9 +1,8 @@
-/**
+﻿/**
  * Tipos TypeScript reutilizables en todo el sistema.
- * Corresponden a los schemas comunes del backend (common.py).
+ * Corresponden a los schemas comunes del backend FastAPI (common.py, auth.py).
  */
 
-/** Respuesta paginada del backend */
 export interface RespuestaPaginada<T> {
   total: number
   pagina: number
@@ -11,54 +10,47 @@ export interface RespuestaPaginada<T> {
   datos: T[]
 }
 
-/** Respuesta de operación exitosa */
 export interface RespuestaExito {
   mensaje: string
-  exitoso: boolean
+  exito: boolean
 }
 
-/** Parámetros de paginación para requests */
 export interface ParametrosPaginacion {
   pagina?: number
   por_pagina?: number
   busqueda?: string
 }
 
-/** Estados posibles de una Orden de Trabajo */
 export type EstadoOrden =
-  | 'Registrado'
-  | 'En Cola'
-  | 'En Impresion'
-  | 'En Acabado'
-  | 'Finalizado'
-  | 'Entregado'
+  | 'REGISTRADO'
+  | 'EN COLA'
+  | 'EN IMPRESION'
+  | 'EN ACABADO'
+  | 'FINALIZADO'
+  | 'ENTREGADO'
 
-/** Estados posibles de una Proforma */
 export type EstadoProforma =
-  | 'emitida'
-  | 'aprobada'
-  | 'rechazada'
-  | 'vencida'
-  | 'cerrada'
+  | 'EMITIDA'
+  | 'APROBADA'
+  | 'RECHAZADA'
+  | 'VENCIDA'
 
-/** Modalidades de trabajo */
 export type Modalidad = 'insumos_imprenta' | 'insumos_cliente'
 
-/** Tipos de cliente */
 export type TipoCliente = 'facultad' | 'docente' | 'autoridad' | 'estudiante' | 'particular'
 
-/** Roles del sistema */
 export type RolSistema =
   | 'Superadministrador'
   | 'Administrador'
   | 'Operador Mostrador'
   | 'Operador Taller'
+  | 'Cliente'
 
-/** Usuario autenticado (payload del JWT) */
+export type PrioridadOrden = 'NORMAL' | 'URGENTE'
+
 export interface UsuarioAutenticado {
-  sub: string       // email
-  nombre: string
+  id_usuario: number
+  email: string
+  nombre_completo: string
   rol: RolSistema
-  id: number
-  exp: number
 }

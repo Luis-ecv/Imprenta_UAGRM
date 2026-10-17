@@ -1,10 +1,6 @@
-/**
- * Contexto de autenticación global.
- * Gestiona el usuario autenticado, el token JWT y el rol activo.
- */
-import { createContext, useState, useCallback, ReactNode } from 'react'
+﻿import { createContext, useState, useCallback, ReactNode } from 'react'
 import { setAccessToken } from '@/api/client'
-import type { UsuarioAutenticado, RolSistema } from '@/types/common.types'
+import type { UsuarioAutenticado, RolSistema } from '@/types'
 
 interface AuthContextType {
   usuario: UsuarioAutenticado | null
@@ -30,13 +26,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{
-      usuario,
-      isAuthenticated: !!usuario,
-      rol: usuario?.rol ?? null,
-      login,
-      logout,
-    }}>
+    <AuthContext.Provider
+      value={{
+        usuario,
+        isAuthenticated: !!usuario,
+        rol: usuario?.rol ?? null,
+        login,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )

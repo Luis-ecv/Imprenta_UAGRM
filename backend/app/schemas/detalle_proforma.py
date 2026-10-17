@@ -1,28 +1,31 @@
 """
-Schemas Pydantic para los detalles (ítems) de una proforma.
+Schemas Pydantic para Detalle de Proforma.
 """
 from decimal import Decimal
 from typing import Optional
-
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict
 
 
 class DetalleProformaBase(BaseModel):
-    tarifa_id: int
-    cantidad: Decimal = Field(gt=0)
-    descripcion: Optional[str] = None
+    tipo_trabajo_id: int
+    insumo_id: Optional[int] = None
+    tarifa_id: Optional[int] = None
+    descripcion_trabajo: str
+    tiraje: int
+    paginas_totales: int
+    costo_papel: Decimal = Decimal("0.00")
+    costo_tinta: Decimal = Decimal("0.00")
+    costo_planchas: Decimal = Decimal("0.00")
+    costo_mano_obra: Decimal = Decimal("0.00")
+    subtotal: Decimal
 
 
 class DetalleProformaCreate(DetalleProformaBase):
-    """Datos para agregar un ítem a una proforma."""
     pass
 
 
 class DetalleProformaResponse(DetalleProformaBase):
-    """Ítem de proforma retornado por la API."""
+    id_detalle_proforma: int
+    proforma_id: int
 
-    id: int
-    precio_unit: Decimal
-    subtotal: Decimal
-
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)

@@ -1,41 +1,37 @@
 """
-Schemas Pydantic para el módulo de Clientes y Solicitantes.
+Schemas Pydantic para el módulo de Clientes y Facultades.
 """
 from typing import Optional
-
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 
 
 class ClienteBase(BaseModel):
-    nombre: str
-    unidad_academica: Optional[str] = None
-    nit: Optional[str] = None
+    tipo_cliente: str
+    razon_social: str
     telefono: Optional[str] = None
-    correo: Optional[EmailStr] = None
+    email: Optional[EmailStr] = None
     direccion: Optional[str] = None
+    codigo_facultad: Optional[str] = None
+    dependencia: Optional[str] = None
+    ci_nit: Optional[str] = None
 
 
 class ClienteCreate(ClienteBase):
-    """Datos para registrar un nuevo cliente institucional."""
     pass
 
 
 class ClienteUpdate(BaseModel):
-    """Campos actualizables de un cliente."""
-
-    nombre: Optional[str] = None
-    unidad_academica: Optional[str] = None
-    nit: Optional[str] = None
+    tipo_cliente: Optional[str] = None
+    razon_social: Optional[str] = None
     telefono: Optional[str] = None
-    correo: Optional[EmailStr] = None
+    email: Optional[EmailStr] = None
     direccion: Optional[str] = None
-    activo: Optional[bool] = None
+    codigo_facultad: Optional[str] = None
+    dependencia: Optional[str] = None
+    ci_nit: Optional[str] = None
 
 
 class ClienteResponse(ClienteBase):
-    """Datos de un cliente retornado por la API."""
+    id_cliente: int
 
-    id: int
-    activo: bool
-
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)

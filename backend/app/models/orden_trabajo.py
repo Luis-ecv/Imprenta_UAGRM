@@ -1,56 +1,39 @@
 """
-Modelo SQLAlchemy para la tabla 'ordenes_trabajo'.
-Documento principal que controla el ciclo de vida de un trabajo de impresión.
+Modelo SQLAlchemy para la tabla 'orden_trabajo'.
 """
-from decimal import Decimal
-
-from sqlalchemy import Date, DateTime, ForeignKey, Numeric, String, Text
+from datetime import date, datetime
+from sqlalchemy import Date, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
-
 from app.models.base import Base
 
 
 class OrdenTrabajo(Base):
-    """Orden de trabajo: documento que controla la producción de impresión."""
+    __tablename__ = "orden_trabajo"
 
-    __tablename__ = "ordenes_trabajo"
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    numero: Mapped[str] = mapped_column(String(20), nullable=False, unique=True)
-    proforma_id: Mapped[int | None] = mapped_column(
-        ForeignKey("proformas.id"), nullable=True
+    id_orden: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    proforma_id: Mapped[int] = mapped_column(
+        ForeignKey("proforma.id_proforma", onupdate="CASCADE", ondelete="RESTRICT"), nullable=False, unique=True
     )
-    cliente_id: Mapped[int] = mapped_column(ForeignKey("clientes.id"), nullable=False)
-    usuario_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id"), nullable=False)
-    descripcion: Mapped[str] = mapped_column(Text, nullable=False)
-    estado: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="PENDIENTE"
+    usuario_id: Mapped[int] = mapped_column(
+        ForeignKey("usuario.id_usuario", onupdate="CASCADE", ondelete="RESTRICT"), nullable=False
     )
-    fecha_inicio: Mapped[Date | None] = mapped_column(Date, nullable=True)
-    fecha_entrega: Mapped[Date | None] = mapped_column(Date, nullable=True)
-    total: Mapped[Decimal] = mapped_column(
-        Numeric(12, 2), nullable=False, default=Decimal("0")
-    )
+    codigo_ot: Mapped[str] = mapped_column(String(30), nullable=False, unique=True)
+    fecha_compromiso: Mapped[date] = mapped_column(Date, nullable=False)
+    prioridad: Mapped[str] = mapped_column(String(20), nullable=False, default="NORMAL")
+    estado_actual: Mapped[str] = mapped_column(String(30), nullable=False, default="REGISTRADO")
     observaciones: Mapped[str | None] = mapped_column(Text, nullable=True)
-    creado_en: Mapped[DateTime] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-    actualizado_en: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
 
     # Relaciones
-    cliente: Mapped["Cliente"] = relationship("Cliente", back_populates="ordenes")
-    proforma: Mapped["Proforma | None"] = relationship(
-        "Proforma", back_populates="ordenes"
-    )
-    detalles: Mapped[list["DetalleOrden"]] = relationship(
+    proforma: Mapped["Proforma"] = relationship("Proforma", back_populates="orden_trabajo")
+    usuario: Mapped["Usuario"] = relationship("Usuario", back_populates="ordenes")
+    detalles_orden: Mapped[list["DetalleOrden"]] = relationship(
         "DetalleOrden", back_populates="orden", cascade="all, delete-orphan"
     )
-    historial_estados: Mapped[list["HistorialEstadoOrden"]] = relationship(
-        "HistorialEstadoOrden", back_populates="orden"
+    historial: Mapped[list["HistorialEstado"]] = relationship(
+        "HistorialEstado", back_populates="orden", cascade="all, delete-orphan"
     )
-    consumos: Mapped[list["ConsumoReal"]] = relationship(
-        "ConsumoReal", back_populates="orden"
-    )
+    consumos: Mapped[list["ConsumoReal"]] = relationship("ConsumoReal", back_populates="orden")

@@ -334,6 +334,7 @@ El agente NUNCA debe:
 
 ## 11. REFERENCIAS
 
+- Resumen y Contrato de Cambios Backend: `frontend/agents/cambiosBackend/resumen_cambios_backend.md`
 - Contexto del agente backend: `backend/agents/contexto_agente.md`
 - Tipos del dominio: `src/types/`
 - Constantes del sistema: `src/utils/constants.ts`

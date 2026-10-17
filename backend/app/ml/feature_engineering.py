@@ -3,58 +3,78 @@ Ingeniería de características para el modelo de predicción de demanda.
 Transforma los registros de consumo_real de la base de datos
 en un DataFrame con las features requeridas por el modelo Random Forest.
 """
+import numpy as np
 import pandas as pd
+
+FEATURES = ["insumo_id", "anio", "mes", "trimestre", "mes_sin", "mes_cos", "lag_1", "lag_3", "rolling_3"]
+TARGET = "cantidad_usada"
 
 
 def preparar_dataset(registros_consumo: list[dict]) -> pd.DataFrame:
-    """
-    Convierte el historial de consumo de insumos en un DataFrame listo para entrenar.
+    """Convierte el historial de consumo de insumos en un DataFrame listo para entrenar."""
+    if not registros_consumo:
+        return pd.DataFrame(columns=FEATURES + [TARGET])
 
-    Columnas del DataFrame resultante:
-        - insumo_id      : identificador del insumo (int)
-        - anio           : año del registro (int)
-        - mes            : mes del registro (int, 1-12)
-        - trimestre      : trimestre del año (int, 1-4)
-        - cantidad_usada : cantidad consumida en el período (float)
-        - mes_sin        : seno del mes (feature cíclica para capturar estacionalidad)
-        - mes_cos        : coseno del mes (feature cíclica para capturar estacionalidad)
-        - lag_1          : consumo del mes anterior para el mismo insumo (float)
-        - lag_3          : consumo de 3 meses atrás (float)
-        - rolling_3      : promedio móvil de los últimos 3 meses (float)
+    df = pd.DataFrame(registros_consumo)
+    df["registrado_en"] = pd.to_datetime(df["registrado_en"])
+    df["anio"] = df["registrado_en"].dt.year
+    df["mes"] = df["registrado_en"].dt.month
+    df["trimestre"] = df["registrado_en"].dt.quarter
 
-    Args:
-        registros_consumo: Lista de dicts con campos
-            {insumo_id, cantidad_usada, registrado_en}.
+    # Features cíclicas para estacionalidad mensual
+    df["mes_sin"] = np.sin(2 * np.pi * df["mes"] / 12)
+    df["mes_cos"] = np.cos(2 * np.pi * df["mes"] / 12)
 
-    Returns:
-        DataFrame con las features y la variable objetivo (cantidad_usada).
-    """
-    # TODO: implementar
-    # 1. Crear DataFrame desde registros_consumo
-    # 2. Parsear registrado_en a datetime y extraer año, mes, trimestre
-    # 3. Calcular features cíclicas: mes_sin = sin(2π * mes / 12)
-    # 4. Calcular lags (lag_1, lag_3) agrupando por insumo_id
-    # 5. Calcular rolling_3 (media móvil de 3 meses)
-    # 6. Eliminar filas con NaN generadas por los lags
-    # 7. Retornar el DataFrame procesado
-    pass
+    # Agrupar por mes e insumo
+    agrupado = df.groupby(["insumo_id", "anio", "mes", "trimestre", "mes_sin", "mes_cos"], as_index=False)[
+        "cantidad_usada"
+    ].sum()
+    agrupado = agrupado.sort_values(["insumo_id", "anio", "mes"])
+
+    # Lags y promedios móviles
+    agrupado["lag_1"] = agrupado.groupby("insumo_id")["cantidad_usada"].shift(1).fillna(0.0)
+    agrupado["lag_3"] = agrupado.groupby("insumo_id")["cantidad_usada"].shift(3).fillna(0.0)
+    agrupado["rolling_3"] = (
+        agrupado.groupby("insumo_id")["cantidad_usada"]
+        .transform(lambda x: x.rolling(3, min_periods=1).mean())
+        .fillna(0.0)
+    )
+
+    return agrupado
 
 
 def obtener_features_para_prediccion(
     insumo_id: int, anio: int, mes: int, historial: pd.DataFrame
 ) -> pd.DataFrame:
-    """
-    Construye el vector de features para predecir un insumo en un período futuro.
-    Usa el historial existente para calcular los lags y rolling de ese insumo.
+    trimestre = (mes - 1) // 3 + 1
+    mes_sin = float(np.sin(2 * np.pi * mes / 12))
+    mes_cos = float(np.cos(2 * np.pi * mes / 12))
 
-    Args:
-        insumo_id: ID del insumo a predecir.
-        anio: Año a predecir.
-        mes: Mes a predecir.
-        historial: DataFrame completo del historial de consumo (salida de preparar_dataset).
+    lag_1 = 0.0
+    lag_3 = 0.0
+    rolling_3 = 0.0
 
-    Returns:
-        DataFrame de una sola fila con las features del período a predecir.
-    """
-    # TODO: implementar
-    pass
+    if not historial.empty and "insumo_id" in historial.columns:
+        df_ins = historial[historial["insumo_id"] == insumo_id].sort_values(["anio", "mes"])
+        if not df_ins.empty:
+            valores = df_ins["cantidad_usada"].tolist()
+            if len(valores) >= 1:
+                lag_1 = float(valores[-1])
+            if len(valores) >= 3:
+                lag_3 = float(valores[-3])
+                rolling_3 = float(np.mean(valores[-3:]))
+            elif valores:
+                rolling_3 = float(np.mean(valores))
+
+    row = {
+        "insumo_id": insumo_id,
+        "anio": anio,
+        "mes": mes,
+        "trimestre": trimestre,
+        "mes_sin": mes_sin,
+        "mes_cos": mes_cos,
+        "lag_1": lag_1,
+        "lag_3": lag_3,
+        "rolling_3": rolling_3,
+    }
+    return pd.DataFrame([row])[FEATURES]

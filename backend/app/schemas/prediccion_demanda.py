@@ -1,39 +1,34 @@
 """
-Schemas Pydantic para el módulo de Predicción de Demanda (Machine Learning).
+Schemas Pydantic para Predicción de Demanda (Machine Learning).
 """
-from datetime import date
+from datetime import datetime
 from decimal import Decimal
-from typing import List, Optional
-
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
-class PrediccionRequest(BaseModel):
-    """Solicitud de predicción para un insumo en un período determinado."""
-
+class InferenciaMLRequest(BaseModel):
     insumo_id: int
-    meses_a_predecir: int = 3  # horizonte de predicción en meses
+    periodo_id: int
 
 
-class PrediccionResponse(BaseModel):
-    """Resultado de predicción para un insumo retornado por la API."""
-
-    id: int
+class PrediccionDemandaResponse(BaseModel):
+    id_prediccion: int
     insumo_id: int
-    periodo_inicio: date
-    periodo_fin: date
-    cantidad_predicha: Decimal
-    confianza_pct: Optional[Decimal] = None
-    version_modelo: Optional[str] = None
+    periodo_id: int
+    cantidad_proyectada: Decimal
+    margen_variabilidad: Decimal
+    stock_sugerido_compra: Decimal
+    fecha_generacion: datetime
+    es_referencial: bool = False
 
-    model_config = {"from_attributes": True}
-
+    model_config = ConfigDict(from_attributes=True)
 
 class EntrenamientoResponse(BaseModel):
-    """Resultado del proceso de entrenamiento del modelo ML."""
-
-    exitoso: bool
     mensaje: str
-    version_modelo: Optional[str] = None
-    registros_usados: Optional[int] = None
-    score_r2: Optional[float] = None  # coeficiente de determinación del modelo
+    registros_entrenamiento: int
+    r2_score: float | None = None
+    mae: float | None = None
+    fecha_entrenamiento: datetime
+
+PrediccionRequest = InferenciaMLRequest
+PrediccionResponse = PrediccionDemandaResponse

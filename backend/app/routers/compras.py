@@ -1,62 +1,53 @@
 """
-Router de Compras.
-Gestión de órdenes de compra de insumos y su proceso de recepción.
+Router de Órdenes de Compra (CU12).
 """
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.core.permissions import get_current_user, require_roles
+from app.core.roles import RolEnum
 from app.database import get_db
 from app.schemas.common import RespuestaPaginada
-from app.schemas.compra import CompraCreate, CompraResponse, CompraUpdate
+from app.schemas.orden_compra import OrdenCompraCreate, OrdenCompraResponse, OrdenCompraUpdate
+from app.services import compra_service
 
 router = APIRouter(prefix="/compras")
 
 
-@router.get("", response_model=RespuestaPaginada[CompraResponse], summary="Listar compras")
+@router.get("", response_model=RespuestaPaginada[OrdenCompraResponse], summary="Listar órdenes de compra")
 async def listar_compras(
     pagina: int = 1,
     por_pagina: int = 20,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles(RolEnum.ADMIN, RolEnum.SUPERADMIN)),
 ):
-    """Retorna la lista paginada de órdenes de compra."""
-    # TODO: implementar llamada a compra_service.listar(db, pagina, por_pagina)
-    pass
+    return await compra_service.listar(db, pagina, por_pagina)
 
 
-@router.post("", response_model=CompraResponse, status_code=201, summary="Crear orden de compra")
+@router.post("", response_model=OrdenCompraResponse, status_code=201, summary="Crear orden de compra")
 async def crear_compra(
-    datos: CompraCreate,
+    datos: OrdenCompraCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_roles("ADMIN", "SUPERADMIN", "COMPRAS")),
+    current_user: dict = Depends(require_roles(RolEnum.ADMIN, RolEnum.SUPERADMIN)),
 ):
-    """Crea una nueva orden de compra con sus ítems de detalle."""
-    # TODO: implementar llamada a compra_service.crear(db, datos, current_user)
-    pass
+    usuario_id = current_user.get("id_usuario", 1)
+    return await compra_service.crear(db, datos, usuario_id)
 
 
-@router.get("/{compra_id}", response_model=CompraResponse, summary="Obtener compra")
+@router.get("/{compra_id}", response_model=OrdenCompraResponse, summary="Obtener orden de compra")
 async def obtener_compra(
     compra_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles(RolEnum.ADMIN, RolEnum.SUPERADMIN)),
 ):
-    """Retorna los datos completos de una orden de compra."""
-    # TODO: implementar llamada a compra_service.obtener(db, compra_id)
-    pass
+    return await compra_service.obtener(db, compra_id)
 
 
-@router.patch("/{compra_id}", response_model=CompraResponse, summary="Actualizar estado de compra")
+@router.patch("/{compra_id}", response_model=OrdenCompraResponse, summary="Actualizar orden de compra")
 async def actualizar_compra(
     compra_id: int,
-    datos: CompraUpdate,
+    datos: OrdenCompraUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_roles("ADMIN", "SUPERADMIN", "COMPRAS")),
+    current_user: dict = Depends(require_roles(RolEnum.ADMIN, RolEnum.SUPERADMIN)),
 ):
-    """
-    Actualiza el estado de una compra. Al recibir (estado=RECIBIDA),
-    actualiza automáticamente el stock de los insumos comprados.
-    """
-    # TODO: implementar llamada a compra_service.actualizar(db, compra_id, datos, current_user)
-    pass
+    usuario_id = current_user.get("id_usuario", 1)
+    return await compra_service.actualizar(db, compra_id, datos, usuario_id)

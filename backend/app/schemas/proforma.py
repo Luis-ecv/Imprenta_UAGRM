@@ -1,41 +1,38 @@
 """
-Schemas Pydantic para el módulo de Proformas de impresión.
+Schemas Pydantic para Proformas de Impresión.
 """
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import List, Optional
-
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict
+from app.schemas.detalle_proforma import DetalleProformaCreate, DetalleProformaResponse
 
 
 class ProformaBase(BaseModel):
     cliente_id: int
-    descripcion: Optional[str] = None
-    fecha_validez: Optional[date] = None
-    observaciones: Optional[str] = None
+    modalidad: str  # insumos_imprenta | insumos_cliente
+    dias_vigencia: int = 15
 
 
 class ProformaCreate(ProformaBase):
-    """Datos para crear una nueva proforma."""
-    pass
+    detalles: List[DetalleProformaCreate]
 
 
 class ProformaUpdate(BaseModel):
-    """Campos actualizables de una proforma (solo en estado BORRADOR)."""
-
-    descripcion: Optional[str] = None
-    fecha_validez: Optional[date] = None
-    observaciones: Optional[str] = None
     estado: Optional[str] = None
+    dias_vigencia: Optional[int] = None
 
 
-class ProformaResponse(ProformaBase):
-    """Proforma completa retornada por la API."""
-
-    id: int
-    numero: str
-    total: Decimal
+class ProformaResponse(BaseModel):
+    id_proforma: int
+    cliente_id: int
+    usuario_id: int
+    codigo_proforma: str
+    modalidad: str
+    total_presupuesto: Decimal
     estado: str
-    fecha_emision: date
+    fecha_emision: datetime
+    fecha_vencimiento: date
+    detalles: List[DetalleProformaResponse] = []
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)

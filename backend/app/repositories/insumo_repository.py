@@ -1,9 +1,11 @@
 """
 Repositorio de Insumos e Inventario.
-Queries SQLAlchemy para insumos, categorías y movimientos de inventario.
+Queries SQLAlchemy para insumo, categoria_insumo y movimiento_inventario.
 """
+from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.categoria_insumo import CategoriaInsumo
 from app.models.insumo import Insumo
@@ -12,48 +14,42 @@ from app.repositories.base_repository import BaseRepository
 
 
 class InsumoRepository(BaseRepository[Insumo]):
-    """Repositorio para operaciones de base de datos sobre la entidad Insumo."""
-
     def __init__(self, db: AsyncSession):
         super().__init__(db, Insumo)
 
     async def obtener_por_codigo(self, codigo: str) -> Insumo | None:
-        """Busca un insumo por su código único."""
         resultado = await self.db.execute(
-            select(Insumo).where(Insumo.codigo == codigo)
+            select(Insumo).options(selectinload(Insumo.categoria)).where(Insumo.codigo == codigo)
         )
         return resultado.scalar_one_or_none()
 
-    async def listar_stock_bajo(self) -> list[Insumo]:
-        """Retorna insumos cuyo stock_actual está por debajo del stock_minimo."""
+    async def obtener_con_categoria(self, id_insumo: int) -> Insumo | None:
         resultado = await self.db.execute(
-            select(Insumo).where(
-                Insumo.stock_actual < Insumo.stock_minimo,
-                Insumo.activo == True,
-            )
+            select(Insumo).options(selectinload(Insumo.categoria)).where(Insumo.id_insumo == id_insumo)
+        )
+        return resultado.scalar_one_or_none()
+
+    async def listar_stock_critico(self) -> list[Insumo]:
+        resultado = await self.db.execute(
+            select(Insumo)
+            .options(selectinload(Insumo.categoria))
+            .where(Insumo.stock_actual <= Insumo.stock_minimo)
+            .order_by(Insumo.stock_actual.asc())
         )
         return list(resultado.scalars().all())
 
-    async def actualizar_stock(self, insumo: Insumo, nuevo_stock: float) -> Insumo:
-        """Actualiza el stock_actual de un insumo."""
-        # TODO: implementar
-        pass
-
-    async def registrar_movimiento(
-        self, movimiento: MovimientoInventario
-    ) -> MovimientoInventario:
-        """Persiste un movimiento de inventario."""
-        # TODO: implementar usando self.db.add + flush
-        pass
+    async def ajustar_stock(self, insumo: Insumo, delta: Decimal) -> Insumo:
+        insumo.stock_actual += delta
+        await self.db.flush()
+        await self.db.refresh(insumo)
+        return insumo
 
     async def listar_categorias(self) -> list[CategoriaInsumo]:
-        """Retorna todas las categorías de insumos activas."""
-        resultado = await self.db.execute(
-            select(CategoriaInsumo).where(CategoriaInsumo.activo == True)
-        )
+        resultado = await self.db.execute(select(CategoriaInsumo).order_by(CategoriaInsumo.nombre))
         return list(resultado.scalars().all())
 
     async def crear_categoria(self, categoria: CategoriaInsumo) -> CategoriaInsumo:
-        """Persiste una nueva categoría de insumo."""
-        # TODO: implementar
-        pass
+        self.db.add(categoria)
+        await self.db.flush()
+        await self.db.refresh(categoria)
+        return categoria

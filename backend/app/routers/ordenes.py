@@ -1,92 +1,67 @@
 """
-Router de Órdenes de Trabajo.
-Gestión del ciclo de vida de las órdenes: creación, cambio de estado y consumo real.
+Router de Órdenes de Trabajo (CU08, CU09, CU10).
 """
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.core.permissions import get_current_user, require_roles
+from app.core.roles import RolEnum
 from app.database import get_db
-from app.schemas.common import RespuestaExito, RespuestaPaginada
+from app.schemas.common import RespuestaPaginada
 from app.schemas.consumo_real import ConsumoRealCreate, ConsumoRealResponse
-from app.schemas.orden_trabajo import (
-    CambioEstadoOrden,
-    OrdenTrabajoCreate,
-    OrdenTrabajoResponse,
-    OrdenTrabajoUpdate,
-)
+from app.schemas.orden_trabajo import CambioEstadoOrden, OrdenTrabajoCreate, OrdenTrabajoResponse
+from app.services import orden_service
 
 router = APIRouter(prefix="/ordenes")
 
 
-@router.get("", response_model=RespuestaPaginada[OrdenTrabajoResponse], summary="Listar órdenes")
+@router.get("", response_model=RespuestaPaginada[OrdenTrabajoResponse], summary="Listar órdenes de trabajo")
 async def listar_ordenes(
     pagina: int = 1,
     por_pagina: int = 20,
+    estado: str | None = Query(default=None, description="Filtrar por estado actual"),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    """Retorna la lista paginada de órdenes de trabajo."""
-    # TODO: implementar llamada a orden_service.listar(db, pagina, por_pagina)
-    pass
+    return await orden_service.listar(db, pagina, por_pagina, estado)
 
 
-@router.post("", response_model=OrdenTrabajoResponse, status_code=201, summary="Crear orden")
+@router.post("", response_model=OrdenTrabajoResponse, status_code=201, summary="Generar orden de trabajo")
 async def crear_orden(
     datos: OrdenTrabajoCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles(RolEnum.ADMIN, RolEnum.SUPERADMIN, RolEnum.MOSTRADOR)),
 ):
-    """Crea una nueva orden de trabajo en estado PENDIENTE."""
-    # TODO: implementar llamada a orden_service.crear(db, datos, current_user)
-    pass
+    usuario_id = current_user.get("id_usuario", 1)
+    return await orden_service.crear_desde_proforma(db, usuario_id, datos)
 
 
-@router.get("/{orden_id}", response_model=OrdenTrabajoResponse, summary="Obtener orden")
+@router.get("/{orden_id}", response_model=OrdenTrabajoResponse, summary="Obtener orden de trabajo")
 async def obtener_orden(
     orden_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    """Retorna los datos completos de una orden de trabajo."""
-    # TODO: implementar llamada a orden_service.obtener(db, orden_id)
-    pass
+    return await orden_service.obtener(db, orden_id)
 
 
-@router.patch(
-    "/{orden_id}/estado",
-    response_model=OrdenTrabajoResponse,
-    summary="Cambiar estado de orden",
-)
+@router.patch("/{orden_id}/estado", response_model=OrdenTrabajoResponse, summary="Avanzar estado de producción")
 async def cambiar_estado(
     orden_id: int,
     datos: CambioEstadoOrden,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles(RolEnum.ADMIN, RolEnum.SUPERADMIN, RolEnum.TALLER)),
 ):
-    """
-    Avanza el estado de una orden siguiendo el flujo:
-    PENDIENTE → EN_PROCESO → COMPLETADA | CANCELADA
-    """
-    # TODO: implementar llamada a orden_service.cambiar_estado(db, orden_id, datos, current_user)
-    pass
+    usuario_id = current_user.get("id_usuario", 1)
+    return await orden_service.cambiar_estado(db, usuario_id, orden_id, datos)
 
 
-@router.post(
-    "/{orden_id}/consumos",
-    response_model=ConsumoRealResponse,
-    status_code=201,
-    summary="Registrar consumo de insumo",
-)
+@router.post("/{orden_id}/consumos", response_model=ConsumoRealResponse, status_code=201, summary="Registrar consumo real y mermas")
 async def registrar_consumo(
     orden_id: int,
     datos: ConsumoRealCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_roles("TALLER", "ADMIN", "SUPERADMIN")),
+    current_user: dict = Depends(require_roles(RolEnum.ADMIN, RolEnum.SUPERADMIN, RolEnum.TALLER)),
 ):
-    """
-    Registra el consumo real de un insumo durante la ejecución de una orden.
-    Descuenta automáticamente el stock del insumo.
-    """
-    # TODO: implementar llamada a orden_service.registrar_consumo(db, orden_id, datos, current_user)
-    pass
+    usuario_id = current_user.get("id_usuario", 1)
+    datos.orden_id = orden_id
+    return await orden_service.registrar_consumo_real(db, usuario_id, datos)

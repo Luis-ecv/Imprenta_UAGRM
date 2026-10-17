@@ -1,22 +1,26 @@
 """
-Schemas Pydantic para el módulo de Bitácora (Auditoría del sistema).
+Schemas Pydantic para Bitácora de Auditoría.
 """
 from datetime import datetime
-from typing import Any, Optional
+from typing import Optional
+from pydantic import BaseModel, ConfigDict
 
-from pydantic import BaseModel
+
+class BitacoraCreate(BaseModel):
+    usuario_id: int
+    accion: str
+    modulo: str
+    detalle: Optional[str] = None
+    ip_origen: str
 
 
 class BitacoraResponse(BaseModel):
-    """Registro de auditoría retornado por la API."""
-
-    id: int
-    usuario_id: Optional[int] = None
+    id_bitacora: int
+    usuario_id: int
     accion: str
-    tabla_afec: Optional[str] = None
-    registro_id: Optional[int] = None
-    detalle: Optional[Any] = None  # JSON libre con datos del evento
-    ip_origen: Optional[str] = None
-    fecha_hora: datetime
+    modulo: str
+    detalle: Optional[str] = None
+    ip_origen: str
+    created_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)

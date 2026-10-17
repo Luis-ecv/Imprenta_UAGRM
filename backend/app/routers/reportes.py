@@ -1,56 +1,45 @@
 """
 Router de Reportes y Dashboards.
-Endpoints de solo lectura para consultas agregadas y métricas del sistema.
 """
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.core.permissions import get_current_user
+from app.core.permissions import require_roles
+from app.core.roles import RolEnum
 from app.database import get_db
+from app.services import reporte_service
 
 router = APIRouter(prefix="/reportes")
 
 
-@router.get("/dashboard", summary="Datos del dashboard principal")
-async def dashboard(
+@router.get("/dashboard", summary="Métricas generales del Dashboard")
+async def obtener_dashboard(
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles(RolEnum.ADMIN, RolEnum.SUPERADMIN, RolEnum.MOSTRADOR, RolEnum.TALLER)),
 ):
-    """
-    Retorna métricas clave del sistema para el panel principal:
-    órdenes activas, insumos con stock bajo, ventas del mes, etc.
-    """
-    # TODO: implementar llamada a reporte_service.dashboard(db)
-    pass
+    return await reporte_service.dashboard(db)
 
 
-@router.get("/insumos/stock-bajo", summary="Insumos con stock bajo el mínimo")
-async def insumos_stock_bajo(
+@router.get("/insumos/stock-bajo", summary="Insumos con stock bajo")
+async def obtener_insumos_stock_bajo(
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles(RolEnum.ADMIN, RolEnum.SUPERADMIN, RolEnum.TALLER)),
 ):
-    """Lista los insumos cuyo stock_actual está por debajo del stock_minimo."""
-    # TODO: implementar llamada a reporte_service.insumos_stock_bajo(db)
-    pass
+    return await reporte_service.insumos_stock_bajo(db)
 
 
 @router.get("/ordenes/por-estado", summary="Conteo de órdenes por estado")
-async def ordenes_por_estado(
+async def obtener_ordenes_por_estado(
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles(RolEnum.ADMIN, RolEnum.SUPERADMIN, RolEnum.TALLER, RolEnum.MOSTRADOR)),
 ):
-    """Retorna el conteo de órdenes de trabajo agrupadas por estado."""
-    # TODO: implementar llamada a reporte_service.ordenes_por_estado(db)
-    pass
+    return await reporte_service.ordenes_por_estado(db)
 
 
 @router.get("/consumo/mensual", summary="Consumo mensual de insumos")
-async def consumo_mensual(
+async def obtener_consumo_mensual(
     anio: int = Query(..., description="Año a consultar"),
     mes: int = Query(..., ge=1, le=12, description="Mes a consultar (1-12)"),
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles(RolEnum.ADMIN, RolEnum.SUPERADMIN)),
 ):
-    """Retorna el consumo total de cada insumo para el mes y año indicados."""
-    # TODO: implementar llamada a reporte_service.consumo_mensual(db, anio, mes)
-    pass
+    return await reporte_service.consumo_mensual(db, anio, mes)

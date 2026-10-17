@@ -5,25 +5,21 @@ from pydantic import BaseModel, EmailStr
 
 
 class LoginRequest(BaseModel):
-    """Datos requeridos para iniciar sesión."""
-
-    nombre_usuario: str
-    contrasena: str
+    """Credenciales para inicio de sesión en mostrador/sistema."""
+    email: EmailStr
+    password: str
 
 
 class TokenResponse(BaseModel):
-    """Respuesta del endpoint de login con el token JWT."""
-
+    """Respuesta del endpoint de autenticación con el token JWT."""
     access_token: str
     token_type: str = "bearer"
-    expira_en: int  # minutos hasta expiración
+    expira_en_minutos: int
 
 
 class UsuarioAutenticado(BaseModel):
-    """Datos del usuario contenidos en el payload del JWT."""
-
-    id: int
-    nombre_usuario: str
-    correo: str
+    """Payload decodificado del JWT."""
+    id_usuario: int
+    email: str
     nombre_completo: str
     rol: str

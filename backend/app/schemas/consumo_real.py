@@ -1,28 +1,24 @@
 """
-Schemas Pydantic para el registro de consumo real de insumos por orden de trabajo.
+Schemas Pydantic para Consumo Real y Mermas de Producción.
 """
+from datetime import datetime
 from decimal import Decimal
-from typing import Optional
-
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
-class ConsumoRealBase(BaseModel):
+class ConsumoRealCreate(BaseModel):
     orden_id: int
     insumo_id: int
-    cantidad_usada: Decimal = Field(gt=0)
+    cantidad_utilizada: Decimal = Field(gt=0)
+    cantidad_merma: Decimal = Field(default=Decimal("0.00"), ge=0)
 
 
-class ConsumoRealCreate(ConsumoRealBase):
-    """Datos para registrar el consumo real de un insumo en una orden."""
-    pass
+class ConsumoRealResponse(BaseModel):
+    id_consumo: int
+    orden_id: int
+    insumo_id: int
+    cantidad_utilizada: Decimal
+    cantidad_merma: Decimal
+    created_at: datetime
 
-
-class ConsumoRealResponse(ConsumoRealBase):
-    """Registro de consumo retornado por la API."""
-
-    id: int
-    costo_unitario: Decimal
-    costo_total: Decimal
-
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)

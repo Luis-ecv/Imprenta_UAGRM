@@ -1,38 +1,31 @@
 """
-Schemas Pydantic para el módulo de Tarifas de servicios de impresión.
+Schemas Pydantic para Tarifas de taller y servicios.
 """
+from datetime import date
 from decimal import Decimal
 from typing import Optional
-
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict
 
 
 class TarifaBase(BaseModel):
-    nombre_servicio: str
-    descripcion: Optional[str] = None
-    precio_unitario: Decimal = Field(gt=0)
-    unidad: str  # ej: "hoja A4", "copia", "documento"
+    concepto: str
+    precio_unitario: Decimal
+    tipo_tarifa: str
+    vigencia_hasta: date
 
 
 class TarifaCreate(TarifaBase):
-    """Datos para registrar una nueva tarifa de servicio."""
     pass
 
 
 class TarifaUpdate(BaseModel):
-    """Campos actualizables de una tarifa."""
-
-    nombre_servicio: Optional[str] = None
-    descripcion: Optional[str] = None
+    concepto: Optional[str] = None
     precio_unitario: Optional[Decimal] = None
-    unidad: Optional[str] = None
-    activo: Optional[bool] = None
+    tipo_tarifa: Optional[str] = None
+    vigencia_hasta: Optional[date] = None
 
 
 class TarifaResponse(TarifaBase):
-    """Tarifa de servicio retornada por la API."""
+    id_tarifa: int
 
-    id: int
-    activo: bool
-
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)

@@ -15,15 +15,17 @@ from app.config import settings
 # =============================================================================
 # Motor asíncrono de conexión a la base de datos
 # =============================================================================
-engine = create_async_engine(
-    settings.DATABASE_URL,
-    # Activa el log de sentencias SQL solo en entorno de desarrollo
-    echo=settings.ENVIRONMENT == "development",
-    pool_size=10,
-    max_overflow=20,
-    # Evita errores de conexiones caducas en el pool
-    pool_pre_ping=True,
-)
+engine_kwargs = {
+    "echo": settings.ENVIRONMENT == "development",
+}
+if not settings.DATABASE_URL.startswith("sqlite"):
+    engine_kwargs.update(
+        pool_size=10,
+        max_overflow=20,
+        pool_pre_ping=True,
+    )
+
+engine = create_async_engine(settings.DATABASE_URL, **engine_kwargs)
 
 # =============================================================================
 # Fábrica de sesiones asíncronas

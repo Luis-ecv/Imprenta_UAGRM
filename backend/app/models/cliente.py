@@ -1,32 +1,23 @@
 """
-Modelo SQLAlchemy para la tabla 'clientes'.
-Representa a las unidades académicas o instituciones que solicitan servicios.
+Modelo SQLAlchemy para la tabla 'cliente'.
 """
-from sqlalchemy import Boolean, DateTime, String, Text
+from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.sql import func
-
 from app.models.base import Base
 
 
 class Cliente(Base):
-    """Cliente institucional de la imprenta (unidades académicas, facultades, etc.)."""
+    __tablename__ = "cliente"
 
-    __tablename__ = "clientes"
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    nombre: Mapped[str] = mapped_column(String(150), nullable=False)
-    unidad_academica: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    nit: Mapped[str | None] = mapped_column(String(20), nullable=True)
-    telefono: Mapped[str | None] = mapped_column(String(20), nullable=True)
-    correo: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    direccion: Mapped[str | None] = mapped_column(Text, nullable=True)
-    activo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    creado_en: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
+    id_cliente: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    tipo_cliente: Mapped[str] = mapped_column(String(30), nullable=False)
+    razon_social: Mapped[str] = mapped_column(String(150), nullable=False)
+    telefono: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    email: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    direccion: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    codigo_facultad: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    dependencia: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    ci_nit: Mapped[str | None] = mapped_column(String(30), nullable=True)
 
     # Relaciones
     proformas: Mapped[list["Proforma"]] = relationship("Proforma", back_populates="cliente")
-    ordenes: Mapped[list["OrdenTrabajo"]] = relationship("OrdenTrabajo", back_populates="cliente")
-    solicitantes: Mapped[list["Solicitante"]] = relationship("Solicitante", back_populates="cliente")

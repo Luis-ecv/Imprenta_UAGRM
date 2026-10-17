@@ -1,58 +1,131 @@
 """
-Servicio de Predicción de Demanda (Machine Learning).
-Orquesta el entrenamiento del modelo Random Forest y la generación de predicciones.
-Usa el módulo app/ml/ para toda la lógica de ciencia de datos.
+Servicio de Predicción de Demanda (CU11, Machine Learning).
 """
+from datetime import datetime, timezone
+from decimal import Decimal
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.config import settings
-from app.core.exceptions import DatosInsuficientesML, RecursoNoEncontrado
+from app.core.exceptions import RecursoNoEncontrado
+from app.ml import feature_engineering, pipeline, predictor
+from app.models.consumo_real import ConsumoReal
+from app.models.insumo import Insumo
+from app.models.periodo_academico import PeriodoAcademico
+from app.models.prediccion_demanda import PrediccionDemanda
 from app.repositories.prediccion_repository import PrediccionRepository
 from app.schemas.prediccion_demanda import (
     EntrenamientoResponse,
-    PrediccionRequest,
-    PrediccionResponse,
+    InferenciaMLRequest,
+    PrediccionDemandaResponse,
 )
+from app.services import bitacora_service
 
 
-async def entrenar(db: AsyncSession) -> EntrenamientoResponse:
-    """
-    Entrena el modelo Random Forest Regressor con el historial de consumos.
+async def entrenar(db: AsyncSession, usuario_id: int = 1) -> EntrenamientoResponse:
+    repo = PrediccionRepository(db)
+    consumos = await repo.obtener_historial_consumos()
 
-    Flujo:
-      1. Consultar historial de consumo_real via PrediccionRepository.
-      2. Verificar que haya al menos ML_MIN_RECORDS_FOR_TRAINING registros.
-         Lanza DatosInsuficientesML si no alcanza.
-      3. Llamar a feature_engineering.preparar_dataset(datos).
-      4. Llamar a pipeline.entrenar(dataset).
-      5. Persistir el modelo .pkl con un nombre de versión (ej: modelo_v20240101.pkl).
-      6. Retornar EntrenamientoResponse con métricas del entrenamiento.
-    """
-    # TODO: implementar
-    pass
+    registros = []
+    for c in consumos:
+        registros.append({
+            "insumo_id": c.insumo_id,
+            "cantidad_usada": float(c.cantidad_utilizada + c.cantidad_merma),
+            "registrado_en": c.created_at,
+        })
+
+    dataset = feature_engineering.preparar_dataset(registros)
+    metricas = pipeline.entrenar(dataset)
+    predictor.invalidar_cache()
+
+    await bitacora_service.registrar(
+        db, usuario_id=usuario_id, accion="ENTRENAR_MODELO_ML", modulo="Predicciones",
+        detalle={
+            "version": metricas["version_modelo"],
+            "registros": len(registros),
+            "score_r2": metricas["score_r2"],
+        }
+    )
+
+    return EntrenamientoResponse(
+        mensaje="Modelo de Machine Learning reentrenado exitosamente.",
+        registros_entrenamiento=len(registros),
+        r2_score=metricas["score_r2"],
+        mae=metricas["mae"],
+        fecha_entrenamiento=datetime.now(timezone.utc),
+    )
 
 
 async def predecir(
-    db: AsyncSession, datos: PrediccionRequest
-) -> PrediccionResponse:
-    """
-    Genera una predicción de demanda para un insumo específico.
+    db: AsyncSession, datos: InferenciaMLRequest, usuario_id: int = 1
+) -> PrediccionDemandaResponse:
+    insumo = await db.get(Insumo, datos.insumo_id)
+    if not insumo:
+        raise RecursoNoEncontrado("Insumo", datos.insumo_id)
 
-    Flujo:
-      1. Verificar que el insumo existe.
-      2. Cargar el modelo .pkl más reciente con predictor.cargar_modelo().
-      3. Preparar las features del insumo.
-      4. Llamar a predictor.predecir(insumo_id, meses).
-      5. Persistir el resultado en la tabla predicciones_ml.
-      6. Retornar PrediccionResponse.
-    """
-    # TODO: implementar
-    pass
+    periodo = await db.get(PeriodoAcademico, datos.periodo_id)
+    if not periodo:
+        raise RecursoNoEncontrado("PeriodoAcademico", datos.periodo_id)
+
+    repo = PrediccionRepository(db)
+    consumos = await repo.obtener_historial_consumos()
+
+    total_registros = len(consumos)
+    es_referencial = (total_registros < settings.ML_MIN_RECORDS_FOR_TRAINING)
+
+    registros = [
+        {
+            "insumo_id": c.insumo_id,
+            "cantidad_usada": float(c.cantidad_utilizada + c.cantidad_merma),
+            "registrado_en": c.created_at,
+        }
+        for c in consumos
+    ]
+    dataset = feature_engineering.preparar_dataset(registros)
+    mes_objetivo = periodo.fecha_inicio.month
+    anio_objetivo = periodo.fecha_inicio.year
+
+    features = feature_engineering.obtener_features_para_prediccion(
+        datos.insumo_id, anio_objetivo, mes_objetivo, dataset
+    )
+
+    cantidad_proyectada = predictor.predecir(datos.insumo_id, features)
+
+    # Margen de variabilidad estimado (mayor si es referencial)
+    margen = cantidad_proyectada * (Decimal("0.25") if es_referencial else Decimal("0.10"))
+    stock_sugerido = max(Decimal("0.00"), (cantidad_proyectada + margen) - insumo.stock_actual)
+
+    prediccion = PrediccionDemanda(
+        insumo_id=datos.insumo_id,
+        periodo_id=datos.periodo_id,
+        cantidad_proyectada=cantidad_proyectada,
+        margen_variabilidad=margen,
+        stock_sugerido_compra=stock_sugerido,
+        fecha_generacion=datetime.now(timezone.utc),
+    )
+    db.add(prediccion)
+    await db.flush()
+    await db.refresh(prediccion)
+
+    await bitacora_service.registrar(
+        db, usuario_id=usuario_id, accion="GENERAR_PREDICCION_ML", modulo="Predicciones",
+        detalle={
+            "id_prediccion": prediccion.id_prediccion,
+            "insumo_id": datos.insumo_id,
+            "proyectada": float(cantidad_proyectada),
+            "es_referencial": es_referencial,
+        }
+    )
+
+    resp = PrediccionDemandaResponse.model_validate(prediccion)
+    resp.es_referencial = es_referencial
+    return resp
 
 
 async def historial(
     db: AsyncSession, insumo_id: int
-) -> list[PrediccionResponse]:
-    """Retorna el historial de predicciones generadas para un insumo."""
-    # TODO: implementar usando PrediccionRepository.listar_por_insumo
-    pass
+) -> list[PrediccionDemandaResponse]:
+    repo = PrediccionRepository(db)
+    preds = await repo.listar_por_insumo(insumo_id)
+    return [PrediccionDemandaResponse.model_validate(p) for p in preds]

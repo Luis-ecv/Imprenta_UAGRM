@@ -1,49 +1,45 @@
 """
-Router de Insumos.
-CRUD de insumos, categorías de insumos y movimientos de inventario.
+Router de Insumos e Inventario.
+CRUD de insumos, categorías y movimientos de stock.
 """
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.core.permissions import get_current_user, require_roles
+from app.core.roles import RolEnum
 from app.database import get_db
-from app.schemas.common import RespuestaExito, RespuestaPaginada
+from app.schemas.categoria_insumo import CategoriaInsumoCreate, CategoriaInsumoResponse
+from app.schemas.common import RespuestaPaginada
 from app.schemas.insumo import (
-    CategoriaInsumoCreate,
-    CategoriaInsumoResponse,
     InsumoCreate,
     InsumoResponse,
     InsumoUpdate,
     MovimientoInventarioCreate,
     MovimientoInventarioResponse,
 )
+from app.services import insumo_service
 
 router = APIRouter(prefix="/insumos")
 
-
-# --- Insumos ---
 
 @router.get("", response_model=RespuestaPaginada[InsumoResponse], summary="Listar insumos")
 async def listar_insumos(
     pagina: int = 1,
     por_pagina: int = 20,
+    categoria_id: int | None = Query(default=None, description="Filtrar por categoría"),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    """Retorna la lista paginada de insumos del catálogo."""
-    # TODO: implementar llamada a insumo_service.listar(db, pagina, por_pagina)
-    pass
+    return await insumo_service.listar(db, pagina, por_pagina, categoria_id)
 
 
 @router.post("", response_model=InsumoResponse, status_code=201, summary="Crear insumo")
 async def crear_insumo(
     datos: InsumoCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_roles("ADMIN", "SUPERADMIN", "ALMACENERO")),
+    current_user: dict = Depends(require_roles(RolEnum.ADMIN, RolEnum.SUPERADMIN)),
 ):
-    """Registra un nuevo insumo en el catálogo."""
-    # TODO: implementar llamada a insumo_service.crear(db, datos)
-    pass
+    usuario_id = current_user.get("id_usuario", 1)
+    return await insumo_service.crear(db, datos, usuario_id)
 
 
 @router.get("/{insumo_id}", response_model=InsumoResponse, summary="Obtener insumo")
@@ -52,9 +48,7 @@ async def obtener_insumo(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    """Retorna los datos completos de un insumo por su ID."""
-    # TODO: implementar llamada a insumo_service.obtener(db, insumo_id)
-    pass
+    return await insumo_service.obtener(db, insumo_id)
 
 
 @router.put("/{insumo_id}", response_model=InsumoResponse, summary="Actualizar insumo")
@@ -62,14 +56,11 @@ async def actualizar_insumo(
     insumo_id: int,
     datos: InsumoUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_roles("ADMIN", "SUPERADMIN", "ALMACENERO")),
+    current_user: dict = Depends(require_roles(RolEnum.ADMIN, RolEnum.SUPERADMIN)),
 ):
-    """Actualiza los datos de un insumo existente."""
-    # TODO: implementar llamada a insumo_service.actualizar(db, insumo_id, datos)
-    pass
+    usuario_id = current_user.get("id_usuario", 1)
+    return await insumo_service.actualizar(db, insumo_id, datos, usuario_id)
 
-
-# --- Movimientos de Inventario ---
 
 @router.post(
     "/{insumo_id}/movimientos",
@@ -81,43 +72,26 @@ async def registrar_movimiento(
     insumo_id: int,
     datos: MovimientoInventarioCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_roles("ADMIN", "SUPERADMIN", "ALMACENERO")),
+    current_user: dict = Depends(require_roles(RolEnum.ADMIN, RolEnum.SUPERADMIN, RolEnum.TALLER)),
 ):
-    """
-    Registra una entrada, salida o ajuste de stock para un insumo.
-    Actualiza automáticamente el stock_actual del insumo.
-    """
-    # TODO: implementar llamada a insumo_service.registrar_movimiento(db, insumo_id, datos)
-    pass
+    usuario_id = current_user.get("id_usuario", 1)
+    datos.insumo_id = insumo_id
+    return await insumo_service.registrar_movimiento(db, usuario_id, datos)
 
 
-# --- Categorías ---
-
-@router.get(
-    "/categorias/",
-    response_model=list[CategoriaInsumoResponse],
-    summary="Listar categorías",
-)
+@router.get("/categorias/", response_model=list[CategoriaInsumoResponse], summary="Listar categorías")
 async def listar_categorias(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    """Retorna todas las categorías de insumos activas."""
-    # TODO: implementar llamada a insumo_service.listar_categorias(db)
-    pass
+    return await insumo_service.listar_categorias(db)
 
 
-@router.post(
-    "/categorias/",
-    response_model=CategoriaInsumoResponse,
-    status_code=201,
-    summary="Crear categoría",
-)
+@router.post("/categorias/", response_model=CategoriaInsumoResponse, status_code=201, summary="Crear categoría")
 async def crear_categoria(
     datos: CategoriaInsumoCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_roles("ADMIN", "SUPERADMIN")),
+    current_user: dict = Depends(require_roles(RolEnum.ADMIN, RolEnum.SUPERADMIN)),
 ):
-    """Crea una nueva categoría de insumos."""
-    # TODO: implementar llamada a insumo_service.crear_categoria(db, datos)
-    pass
+    usuario_id = current_user.get("id_usuario", 1)
+    return await insumo_service.crear_categoria(db, datos, usuario_id)

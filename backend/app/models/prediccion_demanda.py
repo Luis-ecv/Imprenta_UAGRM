@@ -1,36 +1,32 @@
 """
-Modelo SQLAlchemy para la tabla 'predicciones_ml'.
-Almacena las predicciones de demanda generadas por el modelo Random Forest.
+Modelo SQLAlchemy para la tabla 'prediccion_demanda'.
 """
+from datetime import datetime
 from decimal import Decimal
-
-from sqlalchemy import Date, DateTime, ForeignKey, Numeric, String
+from sqlalchemy import DateTime, ForeignKey, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
-
 from app.models.base import Base
 
 
 class PrediccionDemanda(Base):
-    """Predicción de demanda de un insumo generada por el modelo ML."""
+    __tablename__ = "prediccion_demanda"
 
-    __tablename__ = "predicciones_ml"
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    insumo_id: Mapped[int] = mapped_column(ForeignKey("insumos.id"), nullable=False)
-    periodo_inicio: Mapped[Date] = mapped_column(Date, nullable=False)
-    periodo_fin: Mapped[Date] = mapped_column(Date, nullable=False)
-    cantidad_predicha: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
-    confianza_pct: Mapped[Decimal | None] = mapped_column(
-        Numeric(5, 2), nullable=True
+    id_prediccion: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    insumo_id: Mapped[int] = mapped_column(
+        ForeignKey("insumo.id_insumo", onupdate="CASCADE", ondelete="RESTRICT"), nullable=False
     )
-    version_modelo: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    generado_en: Mapped[DateTime] = mapped_column(
+    periodo_id: Mapped[int] = mapped_column(
+        ForeignKey("periodo_academico.id_periodo", onupdate="CASCADE", ondelete="RESTRICT"), nullable=False
+    )
+    cantidad_proyectada: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    margen_variabilidad: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    stock_sugerido_compra: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    fecha_generacion: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-    generado_por: Mapped[int | None] = mapped_column(
-        ForeignKey("usuarios.id"), nullable=True
     )
 
     # Relaciones
     insumo: Mapped["Insumo"] = relationship("Insumo", back_populates="predicciones")
+    periodo: Mapped["PeriodoAcademico"] = relationship("PeriodoAcademico", back_populates="predicciones")
+    ordenes_compra: Mapped[list["OrdenCompra"]] = relationship("OrdenCompra", back_populates="prediccion")

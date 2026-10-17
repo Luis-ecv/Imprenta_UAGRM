@@ -1,61 +1,41 @@
 """
 Schemas Pydantic para el módulo de Usuarios y Roles.
 """
+from datetime import datetime
 from typing import Optional
+from pydantic import BaseModel, EmailStr, ConfigDict
 
-from pydantic import BaseModel, EmailStr
 
-
-# --- Rol ---
-
-class RolBase(BaseModel):
+class RolResponse(BaseModel):
+    id_rol: int
     nombre: str
     descripcion: Optional[str] = None
 
+    model_config = ConfigDict(from_attributes=True)
 
-class RolCreate(RolBase):
-    """Datos para crear un rol."""
-    pass
-
-
-class RolResponse(RolBase):
-    """Datos de un rol retornado por la API."""
-
-    id: int
-    activo: bool
-
-    model_config = {"from_attributes": True}
-
-
-# --- Usuario ---
 
 class UsuarioBase(BaseModel):
-    nombre_usuario: str
-    correo: EmailStr
     nombre_completo: str
+    email: EmailStr
     rol_id: int
+    activo: bool = True
 
 
 class UsuarioCreate(UsuarioBase):
-    """Datos para crear un usuario. Incluye contraseña en texto plano."""
-
-    contrasena: str
+    password: str
 
 
 class UsuarioUpdate(BaseModel):
-    """Datos opcionales para actualizar un usuario."""
-
     nombre_completo: Optional[str] = None
-    correo: Optional[EmailStr] = None
+    email: Optional[EmailStr] = None
     rol_id: Optional[int] = None
     activo: Optional[bool] = None
+    password: Optional[str] = None
 
 
 class UsuarioResponse(UsuarioBase):
-    """Datos de un usuario retornado por la API. Nunca incluye la contraseña."""
+    id_usuario: int
+    ultimo_acceso: Optional[datetime] = None
+    rol: Optional[RolResponse] = None
 
-    id: int
-    activo: bool
-    rol: RolResponse
-
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)

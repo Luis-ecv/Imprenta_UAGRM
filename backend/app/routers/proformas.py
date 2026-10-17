@@ -1,15 +1,17 @@
 """
-Router de Proformas de impresión.
-Gestión de proformas, sus ítems de detalle y cambio de estado.
+Router de Proformas de Impresión (CU06, CU07).
 """
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
+from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from app.core.exceptions import RecursoNoEncontrado
 from app.core.permissions import get_current_user, require_roles
+from app.core.roles import RolEnum
 from app.database import get_db
-from app.schemas.common import RespuestaExito, RespuestaPaginada
-from app.schemas.detalle_proforma import DetalleProformaCreate, DetalleProformaResponse
-from app.schemas.proforma import ProformaCreate, ProformaResponse, ProformaUpdate
+from app.repositories.proforma_repository import ProformaRepository
+from app.schemas.common import RespuestaPaginada
+from app.schemas.proforma import ProformaCreate, ProformaResponse
+from app.services import pdf_service, proforma_service
 
 router = APIRouter(prefix="/proformas")
 
@@ -18,23 +20,22 @@ router = APIRouter(prefix="/proformas")
 async def listar_proformas(
     pagina: int = 1,
     por_pagina: int = 20,
+    cliente_id: int | None = Query(default=None, description="Filtrar por cliente"),
+    estado: str | None = Query(default=None, description="Filtrar por estado"),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    """Retorna la lista paginada de proformas."""
-    # TODO: implementar llamada a proforma_service.listar(db, pagina, por_pagina)
-    pass
+    return await proforma_service.listar(db, pagina, por_pagina, cliente_id, estado)
 
 
-@router.post("", response_model=ProformaResponse, status_code=201, summary="Crear proforma")
+@router.post("", response_model=ProformaResponse, status_code=201, summary="Emitir proforma")
 async def crear_proforma(
     datos: ProformaCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles(RolEnum.ADMIN, RolEnum.SUPERADMIN, RolEnum.MOSTRADOR)),
 ):
-    """Crea una nueva proforma en estado BORRADOR."""
-    # TODO: implementar llamada a proforma_service.crear(db, datos, current_user)
-    pass
+    usuario_id = current_user.get("id_usuario", 1)
+    return await proforma_service.crear(db, usuario_id, datos)
 
 
 @router.get("/{proforma_id}", response_model=ProformaResponse, summary="Obtener proforma")
@@ -43,51 +44,28 @@ async def obtener_proforma(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    """Retorna los datos completos de una proforma, incluidos sus ítems."""
-    # TODO: implementar llamada a proforma_service.obtener(db, proforma_id)
-    pass
+    return await proforma_service.obtener(db, proforma_id)
 
 
-@router.put("/{proforma_id}", response_model=ProformaResponse, summary="Actualizar proforma")
-async def actualizar_proforma(
+@router.get("/{proforma_id}/imprimir", response_class=HTMLResponse, summary="Generar documento imprimible / PDF")
+async def imprimir_proforma(
     proforma_id: int,
-    datos: ProformaUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    """Actualiza una proforma. Solo es posible si está en estado BORRADOR."""
-    # TODO: implementar llamada a proforma_service.actualizar(db, proforma_id, datos)
-    pass
+    repo = ProformaRepository(db)
+    proforma = await repo.obtener_con_detalles(proforma_id)
+    if not proforma:
+        raise RecursoNoEncontrado("Proforma", proforma_id)
+    return HTMLResponse(content=pdf_service.generar_html_proforma(proforma))
 
 
-@router.post(
-    "/{proforma_id}/detalles",
-    response_model=DetalleProformaResponse,
-    status_code=201,
-    summary="Agregar ítem a proforma",
-)
-async def agregar_detalle(
+@router.patch("/{proforma_id}/estado", response_model=ProformaResponse, summary="Cambiar estado proforma")
+async def cambiar_estado_proforma(
     proforma_id: int,
-    datos: DetalleProformaCreate,
+    nuevo_estado: str = Query(..., description="Nuevo estado: APROBADA, RECHAZADA, VENCIDA"),
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles(RolEnum.ADMIN, RolEnum.SUPERADMIN, RolEnum.MOSTRADOR)),
 ):
-    """Agrega un ítem de servicio a una proforma existente."""
-    # TODO: implementar llamada a proforma_service.agregar_detalle(db, proforma_id, datos)
-    pass
-
-
-@router.delete(
-    "/{proforma_id}/detalles/{detalle_id}",
-    response_model=RespuestaExito,
-    summary="Eliminar ítem de proforma",
-)
-async def eliminar_detalle(
-    proforma_id: int,
-    detalle_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
-):
-    """Elimina un ítem de una proforma en estado BORRADOR."""
-    # TODO: implementar llamada a proforma_service.eliminar_detalle(db, proforma_id, detalle_id)
-    pass
+    usuario_id = current_user.get("id_usuario", 1)
+    return await proforma_service.cambiar_estado(db, proforma_id, nuevo_estado, usuario_id)

@@ -1,68 +1,44 @@
 """
-Router de Predicciones de Demanda (Machine Learning).
-Endpoints para entrenar el modelo y generar predicciones de consumo futuro.
+Router de Predicciones de Demanda (CU11, Machine Learning).
 """
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.core.permissions import get_current_user, require_roles
+from app.core.permissions import require_roles
+from app.core.roles import RolEnum
 from app.database import get_db
 from app.schemas.prediccion_demanda import (
     EntrenamientoResponse,
-    PrediccionRequest,
-    PrediccionResponse,
+    InferenciaMLRequest,
+    PrediccionDemandaResponse,
 )
+from app.services import prediccion_service
 
 router = APIRouter(prefix="/predicciones")
 
 
-@router.post(
-    "/entrenar",
-    response_model=EntrenamientoResponse,
-    summary="Entrenar modelo de predicción",
-)
+@router.post("/entrenar", response_model=EntrenamientoResponse, summary="Entrenar modelo ML")
 async def entrenar_modelo(
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_roles("ADMIN", "SUPERADMIN")),
+    current_user: dict = Depends(require_roles(RolEnum.ADMIN, RolEnum.SUPERADMIN)),
 ):
-    """
-    Dispara el entrenamiento del modelo Random Forest Regressor
-    con el historial de consumo de insumos almacenado en la base de datos.
-    Requiere al menos ML_MIN_RECORDS_FOR_TRAINING registros históricos.
-    """
-    # TODO: implementar llamada a prediccion_service.entrenar(db)
-    pass
+    usuario_id = current_user.get("id_usuario", 1)
+    return await prediccion_service.entrenar(db, usuario_id)
 
 
-@router.post(
-    "/",
-    response_model=PrediccionResponse,
-    status_code=201,
-    summary="Generar predicción de demanda",
-)
+@router.post("/", response_model=PrediccionDemandaResponse, summary="Generar predicción de demanda")
 async def generar_prediccion(
-    datos: PrediccionRequest,
+    datos: InferenciaMLRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles(RolEnum.ADMIN, RolEnum.SUPERADMIN)),
 ):
-    """
-    Genera una predicción de demanda para un insumo específico
-    en el horizonte de meses indicado, usando el modelo entrenado.
-    """
-    # TODO: implementar llamada a prediccion_service.predecir(db, datos)
-    pass
+    usuario_id = current_user.get("id_usuario", 1)
+    return await prediccion_service.predecir(db, datos, usuario_id)
 
 
-@router.get(
-    "/{insumo_id}",
-    response_model=list[PrediccionResponse],
-    summary="Historial de predicciones de un insumo",
-)
+@router.get("/{insumo_id}", response_model=list[PrediccionDemandaResponse], summary="Historial de predicciones")
 async def historial_predicciones(
     insumo_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles(RolEnum.ADMIN, RolEnum.SUPERADMIN)),
 ):
-    """Retorna el historial de predicciones generadas para un insumo."""
-    # TODO: implementar llamada a prediccion_service.historial(db, insumo_id)
-    pass
+    return await prediccion_service.historial(db, insumo_id)

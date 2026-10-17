@@ -1,31 +1,23 @@
 """
-Repositorio de Compras.
-Queries SQLAlchemy para órdenes de compra y sus ítems de detalle.
+Repositorio de Órdenes de Compra.
 """
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-
-from app.models.compra import Compra
+from app.models.orden_compra import OrdenCompra
 from app.repositories.base_repository import BaseRepository
 
 
-class CompraRepository(BaseRepository[Compra]):
-    """Repositorio para operaciones de base de datos sobre la entidad Compra."""
-
+class OrdenCompraRepository(BaseRepository[OrdenCompra]):
     def __init__(self, db: AsyncSession):
-        super().__init__(db, Compra)
+        super().__init__(db, OrdenCompra)
 
-    async def obtener_con_detalles(self, compra_id: int) -> Compra | None:
-        """Carga una compra con sus ítems de detalle (eager load)."""
+    async def obtener_con_relaciones(self, id_orden_compra: int) -> OrdenCompra | None:
         resultado = await self.db.execute(
-            select(Compra)
-            .options(selectinload(Compra.detalles))
-            .where(Compra.id == compra_id)
+            select(OrdenCompra)
+            .options(selectinload(OrdenCompra.proveedor), selectinload(OrdenCompra.prediccion))
+            .where(OrdenCompra.id_orden_compra == id_orden_compra)
         )
         return resultado.scalar_one_or_none()
 
-    async def obtener_ultimo_numero(self, anio: int) -> int:
-        """Retorna el último número correlativo de compra para el año dado."""
-        # TODO: implementar
-        pass
+CompraRepository = OrdenCompraRepository
