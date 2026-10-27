@@ -8,7 +8,7 @@ from app.core.permissions import require_roles
 from app.core.roles import RolEnum
 from app.database import get_db
 from app.schemas.common import MensajeRespuesta, RespuestaPaginada
-from app.schemas.usuario import UsuarioCreate, UsuarioResponse, UsuarioUpdate
+from app.schemas.usuario import RolResponse, UsuarioCreate, UsuarioResponse, UsuarioUpdate
 from app.services import usuario_service
 
 router = APIRouter(prefix="/usuarios")
@@ -22,6 +22,15 @@ async def listar_usuarios(
     current_user: dict = Depends(require_roles(RolEnum.ADMIN, RolEnum.SUPERADMIN)),
 ):
     return await usuario_service.listar(db, pagina, por_pagina)
+
+
+@router.get("/roles", response_model=list[RolResponse], summary="Listar roles disponibles")
+async def listar_roles(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_roles(RolEnum.ADMIN, RolEnum.SUPERADMIN)),
+):
+    """Retorna la lista de roles del sistema para desplegables y formularios."""
+    return await usuario_service.listar_roles(db)
 
 
 @router.post("", response_model=UsuarioResponse, status_code=201, summary="Crear usuario")

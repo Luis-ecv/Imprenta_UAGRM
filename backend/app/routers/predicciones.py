@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.permissions import require_roles
 from app.core.roles import RolEnum
 from app.database import get_db
+from app.schemas.periodo_academico import PeriodoAcademicoResponse
 from app.schemas.prediccion_demanda import (
     EntrenamientoResponse,
     InferenciaMLRequest,
@@ -25,7 +26,17 @@ async def entrenar_modelo(
     return await prediccion_service.entrenar(db, usuario_id)
 
 
-@router.post("/", response_model=PrediccionDemandaResponse, summary="Generar predicción de demanda")
+@router.get("/periodos", response_model=list[PeriodoAcademicoResponse], summary="Listar periodos académicos")
+async def listar_periodos(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_roles(RolEnum.ADMIN, RolEnum.SUPERADMIN)),
+):
+    """Lista los semestres académicos para poblar el selector de predicción."""
+    return await prediccion_service.listar_periodos(db)
+
+
+@router.post("", response_model=PrediccionDemandaResponse, summary="Generar predicción de demanda")
+@router.post("/", include_in_schema=False)
 async def generar_prediccion(
     datos: InferenciaMLRequest,
     db: AsyncSession = Depends(get_db),

@@ -42,6 +42,27 @@ async def crear_insumo(
     return await insumo_service.crear(db, datos, usuario_id)
 
 
+# Categorías declaradas antes de /{insumo_id} para evitar colisión de rutas
+@router.get("/categorias", response_model=list[CategoriaInsumoResponse], summary="Listar categorías")
+@router.get("/categorias/", include_in_schema=False)
+async def listar_categorias(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    return await insumo_service.listar_categorias(db)
+
+
+@router.post("/categorias", response_model=CategoriaInsumoResponse, status_code=201, summary="Crear categoría")
+@router.post("/categorias/", include_in_schema=False, status_code=201)
+async def crear_categoria(
+    datos: CategoriaInsumoCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_roles(RolEnum.ADMIN, RolEnum.SUPERADMIN)),
+):
+    usuario_id = current_user.get("id_usuario", 1)
+    return await insumo_service.crear_categoria(db, datos, usuario_id)
+
+
 @router.get("/{insumo_id}", response_model=InsumoResponse, summary="Obtener insumo")
 async def obtener_insumo(
     insumo_id: int,
@@ -77,21 +98,3 @@ async def registrar_movimiento(
     usuario_id = current_user.get("id_usuario", 1)
     datos.insumo_id = insumo_id
     return await insumo_service.registrar_movimiento(db, usuario_id, datos)
-
-
-@router.get("/categorias/", response_model=list[CategoriaInsumoResponse], summary="Listar categorías")
-async def listar_categorias(
-    db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
-):
-    return await insumo_service.listar_categorias(db)
-
-
-@router.post("/categorias/", response_model=CategoriaInsumoResponse, status_code=201, summary="Crear categoría")
-async def crear_categoria(
-    datos: CategoriaInsumoCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_roles(RolEnum.ADMIN, RolEnum.SUPERADMIN)),
-):
-    usuario_id = current_user.get("id_usuario", 1)
-    return await insumo_service.crear_categoria(db, datos, usuario_id)
