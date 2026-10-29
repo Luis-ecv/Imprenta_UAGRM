@@ -37,6 +37,7 @@ async def listar_periodos(
 
 @router.post("", response_model=PrediccionDemandaResponse, summary="Generar predicción de demanda")
 @router.post("/", include_in_schema=False)
+@router.post("/estimar", response_model=PrediccionDemandaResponse, include_in_schema=False)
 async def generar_prediccion(
     datos: InferenciaMLRequest,
     db: AsyncSession = Depends(get_db),

@@ -1,4 +1,4 @@
-﻿export interface InferenciaMLRequest {
+export interface InferenciaMLRequest {
   insumo_id: number
   periodo_id: number
 }
@@ -20,4 +20,13 @@ export interface EntrenamientoResponse {
   r2_score?: number | null
   mae?: number | null
   fecha_entrenamiento: string
+}
+
+export interface PeriodoAcademicoResponse {
+  id_periodo: number
+  gestion: number
+  semestre: string
+  fecha_inicio: string
+  fecha_fin: string
+  es_pico_demanda: boolean
 }
