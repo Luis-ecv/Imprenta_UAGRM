@@ -1,4 +1,4 @@
-﻿import { createContext, useState, useCallback, ReactNode } from 'react'
+import { createContext, useState, useCallback, ReactNode } from 'react'
 import { setAccessToken } from '@/api/client'
 import type { UsuarioAutenticado, RolSistema } from '@/types'
 
@@ -17,7 +17,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback((token: string, userData: UsuarioAutenticado) => {
     setAccessToken(token)
-    setUsuario(userData)
+    setUsuario({
+      ...userData,
+      nombre_completo: userData.nombre_completo
+        ? userData.nombre_completo.replace(/\s*\([^)]*\)/g, '').trim()
+        : '',
+    })
   }, [])
 
   const logout = useCallback(() => {

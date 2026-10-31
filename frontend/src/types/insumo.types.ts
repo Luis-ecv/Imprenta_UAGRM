@@ -1,7 +1,13 @@
 ﻿export interface CategoriaInsumoResponse {
   id_categoria: number
   nombre: string
+  unidad_base?: string
   descripcion?: string | null
+}
+
+export interface CategoriaInsumoCreate {
+  nombre: string
+  unidad_base: string
 }
 
 export interface InsumoBase {

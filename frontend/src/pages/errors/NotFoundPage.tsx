@@ -13,7 +13,7 @@ export function NotFoundPage() {
       </p>
       <Link
         to="/dashboard"
-        className="flex items-center gap-2 px-5 py-2.5 bg-[#800000] text-white font-bold rounded-xl hover:bg-[#670000] transition shadow-sm"
+        className="flex items-center gap-2 px-5 py-2.5 bg-[#1e2b4d] text-white font-bold rounded-xl hover:bg-[#141d34] transition shadow-sm"
       >
         <ArrowLeft size={18} />
         Volver al inicio

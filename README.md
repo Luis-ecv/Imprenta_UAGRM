@@ -151,3 +151,11 @@ La documentación interactiva de la API REST se genera automáticamente con Fast
 ---
 
 *Desarrollado para la Imprenta Universitaria de la UAGRM — Santa Cruz, Bolivia.*
+
+
+
+
+<!-- ⚠️ Regla importante de ejecución:
+Asegúrate siempre de estar ejecutando el comando de desarrollo que combina ambos archivos compose: -->
+
+# docker compose -f docker-compose.yml -f docker-compose.dev.yml up

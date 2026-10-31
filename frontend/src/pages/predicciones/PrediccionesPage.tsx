@@ -125,7 +125,7 @@ export function PrediccionesPage() {
       {/* Encabezado */}
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#55a6bc]">Inteligencia Operativa UAGRM</p>
+          {/* <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#55a6bc]">Inteligencia Operativa UAGRM</p> */}
           <h1 className="text-3xl font-extrabold tracking-tight text-[#263454]">
             Estimación de Demanda y Machine Learning
           </h1>
@@ -140,7 +140,7 @@ export function PrediccionesPage() {
             type="button"
             onClick={handleReentrenar}
             disabled={reentrenando}
-            className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 transition disabled:opacity-60 cursor-pointer"
+            className="flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 transition disabled:opacity-60 cursor-pointer"
             title="Re-entrenar modelo Random Forest con nuevos datos de consumo"
           >
             <RefreshCw size={14} className={reentrenando ? 'animate-spin text-[#800000]' : ''} />
@@ -150,7 +150,7 @@ export function PrediccionesPage() {
           <button
             type="button"
             onClick={handleExportar}
-            className="flex items-center gap-2 rounded-xl bg-slate-100 hover:bg-slate-200 px-3.5 py-2 text-xs font-bold text-slate-700 transition"
+            className="flex items-center gap-2 rounded-full bg-slate-100 hover:bg-slate-200 px-3.5 py-2 text-xs font-bold text-slate-700 transition"
           >
             <Download size={14} /> Exportar
           </button>
@@ -279,7 +279,7 @@ export function PrediccionesPage() {
             type="button"
             onClick={handleEstimar}
             disabled={ejecutandoInferencia || !insumoSeleccionado}
-            className="flex items-center justify-center gap-2 rounded-xl bg-[#800000] px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-[#670000] transition disabled:opacity-60 cursor-pointer"
+            className="flex items-center justify-center gap-2 rounded-full bg-[#1e2b4d] px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-[#141d34] transition disabled:opacity-60 cursor-pointer"
           >
             {ejecutandoInferencia ? (
               <>

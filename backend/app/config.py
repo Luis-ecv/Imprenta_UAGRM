@@ -40,7 +40,15 @@ class Settings(BaseSettings):
     # =========================================================================
     # CORS — orígenes permitidos
     # =========================================================================
-    ALLOWED_ORIGINS: Union[List[str], str] = ["http://localhost:5173", "http://localhost:80"]
+    #  ALLOWED_ORIGINS: Union[List[str], str] = ["http://localhost:5173", "http://localhost:80"]
+    ALLOWED_ORIGINS: Union[List[str], str] = [
+        "http://localhost",
+        "http://localhost:80",
+        "http://localhost:5173",
+        "http://127.0.0.1",
+        "http://127.0.0.1:80",
+        "http://127.0.0.1:5173",
+    ]
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod

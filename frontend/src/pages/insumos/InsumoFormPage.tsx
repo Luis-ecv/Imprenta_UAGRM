@@ -1,167 +1,480 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Layers, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
-import { insumosApi } from '@/api/insumos.api'
+import { useState, useEffect, type FormEvent } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Typography from '@mui/material/Typography';
+import Grid from '@mui/material/Grid';
+import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import Alert from '@mui/material/Alert';
+import CircularProgress from '@mui/material/CircularProgress';
+import InputAdornment from '@mui/material/InputAdornment';
+import Divider from '@mui/material/Divider';
+import { alpha } from '@mui/material/styles';
+import {
+  ArrowLeft,
+  Package,
+  DollarSign,
+  Barcode,
+  Check,
+} from 'lucide-react';
+
+import { insumosApi } from '@/api/insumos.api';
+import { UAGRM_COLORS } from '@/theme/uagrmTheme';
+
+// Categor铆as institucionales de la Imprenta UAGRM
+const CATEGORIAS_INSUMO = [
+  { id: 1, nombre: 'Papeles y Cartulinas' },
+  { id: 2, nombre: 'Tintas Offset' },
+  { id: 3, nombre: 'Matrices y Planchas' },
+  { id: 4, nombre: 'Qu铆micos y Acabados' },
+];
+
+const UNIDADES_MEDIDA = [
+  'Pliego',
+  'Resma',
+  'Kg',
+  'Litro',
+  'Unidad',
+  'Rollo',
+  'Caja',
+];
 
 export function InsumoFormPage() {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const esEdicion = Boolean(id);
 
-  const [codigo, setCodigo] = useState('')
-  const [descripcion, setDescripcion] = useState('')
-  const categoriaId = 1
-  const [stockMinimo, setStockMinimo] = useState(50)
-  const [stockActual, setStockActual] = useState(100)
-  const [costoReposicion, setCostoReposicion] = useState(38.5)
-  const [unidadMedida, setUnidadMedida] = useState('PLIEGOS')
+  // Estados del formulario
+  const [codigo, setCodigo] = useState('');
+  const [descripcion, setDescripcion] = useState('');
+  const [categoriaId, setCategoriaId] = useState<number>(1);
+  const [unidadMedida, setUnidadMedida] = useState('Pliego');
+  const [stockActual, setStockActual] = useState<string>('0');
+  const [stockMinimo, setStockMinimo] = useState<string>('10');
+  const [costoReposicion, setCostoReposicion] = useState<string>('0.00');
 
-  const [guardando, setGuardando] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  // Estados de control y feedback
+  const [cargandoInicial, setCargandoInicial] = useState<boolean>(esEdicion);
+  const [guardando, setGuardando] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault()
+  // Cargar datos si estamos en modo edici贸n
+  useEffect(() => {
+    if (!esEdicion || !id) return;
+
+    async function cargarInsumo() {
+      try {
+        setCargandoInicial(true);
+        setError(null);
+        const insumo = await insumosApi.obtener(Number(id));
+        setCodigo(insumo.codigo);
+        setDescripcion(insumo.descripcion);
+        setCategoriaId(insumo.categoria_id || 1);
+        setUnidadMedida(insumo.unidad_medida);
+        setStockActual(insumo.stock_actual.toString());
+        setStockMinimo(insumo.stock_minimo.toString());
+        setCostoReposicion(insumo.costo_reposicion.toString());
+      } catch {
+        setError('No se pudo cargar la informaci贸n del insumo para edici贸n.');
+      } finally {
+        setCargandoInicial(false);
+      }
+    }
+
+    cargarInsumo();
+  }, [id, esEdicion]);
+
+  // Manejador del guardado
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    setError(null);
+
+    const payload = {
+      categoria_id: Number(categoriaId),
+      codigo: codigo.trim().toUpperCase(),
+      descripcion: descripcion.trim(),
+      stock_actual: Math.max(0, parseFloat(stockActual) || 0),
+      stock_minimo: Math.max(0, parseFloat(stockMinimo) || 0),
+      costo_reposicion: Math.max(0, parseFloat(costoReposicion) || 0),
+      unidad_medida: unidadMedida,
+    };
+
+    if (!payload.codigo || !payload.descripcion) {
+      setError('Por favor complete todos los campos obligatorios.');
+      return;
+    }
+
     try {
-      setGuardando(true)
-      await insumosApi.crear({
-        categoria_id: Number(categoriaId),
-        codigo,
-        descripcion,
-        stock_minimo: Number(stockMinimo),
-        stock_actual: Number(stockActual),
-        costo_reposicion: Number(costoReposicion),
-        unidad_medida: unidadMedida,
-      })
-      navigate('/insumos')
+      setGuardando(true);
+      if (esEdicion && id) {
+        await insumosApi.actualizar(Number(id), payload);
+      } else {
+        await insumosApi.crear(payload);
+      }
+      navigate('/insumos');
     } catch {
-      setError('Error al registrar el nuevo insumo en el sistema.')
+      setError(
+        esEdicion
+          ? 'Error al actualizar el insumo. Verifique si el c贸digo ya existe.'
+          : 'Error al registrar el nuevo insumo. Verifique si el c贸digo ya existe.'
+      );
     } finally {
-      setGuardando(false)
+      setGuardando(false);
     }
   }
 
+  if (cargandoInicial) {
+    return (
+      <Box sx={{ p: 6, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+        <CircularProgress size={40} sx={{ color: UAGRM_COLORS.blue.main }} />
+        <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 600 }}>
+          Cargando datos del insumo...
+        </Typography>
+      </Box>
+    );
+  }
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <Link
-        to="/insumos"
-        className="inline-flex items-center gap-2 text-sm font-bold text-[#800000] hover:text-[#670000] transition"
+    <Box sx={{ p: { xs: 2, sm: 3, md: 3.5 }, backgroundColor: UAGRM_COLORS.background.default, minHeight: '100%' }}>
+      {/* Bot贸n de retorno y migas de pan */}
+      <Box sx={{ mb: 3 }}>
+        <Button
+          component={Link}
+          to="/insumos"
+          startIcon={<ArrowLeft size={16} />}
+          sx={{
+            color: UAGRM_COLORS.red.main,
+            fontWeight: 700,
+            textTransform: 'none',
+            fontSize: '0.875rem',
+            p: 0,
+            mb: 1.5,
+            '&:hover': { backgroundColor: 'transparent', color: UAGRM_COLORS.red.dark },
+          }}
+        >
+          Volver al Cat谩logo de Insumos
+        </Button>
+
+        <Typography
+          variant="overline"
+          sx={{
+            fontWeight: 800,
+            letterSpacing: '0.12em',
+            color: UAGRM_COLORS.cyan.main,
+            display: 'block',
+            lineHeight: 1.2,
+          }}
+        >
+          Gesti贸n de Almac茅n 路 Imprenta UAGRM
+        </Typography>
+        <Typography
+          variant="h4"
+          sx={{
+            fontWeight: 780,
+            color: UAGRM_COLORS.blue.dark,
+            letterSpacing: '-0.02em',
+          }}
+        >
+          {esEdicion ? 'Editar Insumo de Imprenta' : 'Registrar Nuevo Insumo'}
+        </Typography>
+        <Typography variant="body2" sx={{ color: '#64748b', mt: 0.5 }}>
+          {esEdicion
+            ? `Actualizaci贸n de par谩metros t茅cnicos y costos para ${codigo || 'el insumo'}.`
+            : 'Alta de material o insumo litogr谩fico en el cat谩logo central de la universidad.'}
+        </Typography>
+      </Box>
+
+      {/* Alerta de error */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+
+      {/* Formulario en Tarjeta Principal */}
+      <Card
+        elevation={0}
+        sx={{
+          maxWidth: 900,
+          borderRadius: 3,
+          border: `1px solid ${UAGRM_COLORS.border}`,
+          backgroundColor: '#ffffff',
+          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)',
+        }}
       >
-        <ArrowLeft size={16} /> Volver a insumos
-      </Link>
+        <form onSubmit={handleSubmit}>
+          <CardContent sx={{ p: { xs: 2.5, sm: 4 } }}>
+            {/* Secci贸n 1: Identificaci贸n del Material */}
+            <Box sx={{ mb: 3.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                <Box
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 2,
+                    backgroundColor: alpha(UAGRM_COLORS.blue.main, 0.08),
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: UAGRM_COLORS.blue.main,
+                  }}
+                >
+                  <Barcode size={18} />
+                </Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 780, color: UAGRM_COLORS.blue.dark }}>
+                  1. Identificaci贸n y Clasificaci贸n
+                </Typography>
+              </Box>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
-        <div className="border-b border-slate-100 pb-3">
-          <h1 className="text-2xl font-extrabold text-[#263454] flex items-center gap-2">
-            <Layers size={22} className="text-[#800000]" />
-            Registrar Nuevo Insumo
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Alta de material litogr醘ico en el cat醠ogo central de la UAGRM.
-          </p>
-        </div>
+              <Grid container spacing={2.5}>
+                <Grid size={{ xs: 12, sm: 4 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="C贸digo Institucional *"
+                    placeholder="Ej. PAP-BOND-75"
+                    value={codigo}
+                    onChange={(e) => setCodigo(e.target.value)}
+                    required
+                    slotProps={{ htmlInput: { style: { fontFamily: 'monospace', fontWeight: 700 } } }}
+                    helperText="Identificador 煤nico de almac茅n"
+                  />
+                </Grid>
 
-        {error && (
-          <div className="flex items-center gap-3 p-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-sm">
-            <AlertCircle size={18} className="shrink-0 text-rose-600" />
-            <span>{error}</span>
-          </div>
-        )}
+                <Grid size={{ xs: 12, sm: 4 }}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel id="categoria-label">Categor铆a Litogr谩fica *</InputLabel>
+                    <Select
+                      labelId="categoria-label"
+                      value={categoriaId}
+                      label="Categor铆a Litogr谩fica *"
+                      onChange={(e) => setCategoriaId(Number(e.target.value))}
+                    >
+                      {CATEGORIAS_INSUMO.map((cat) => (
+                        <MenuItem key={cat.id} value={cat.id}>
+                          {cat.nombre}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
-                C骴igo Institucional *
-              </label>
-              <input
-                type="text"
-                required
-                value={codigo}
-                onChange={(e) => setCodigo(e.target.value)}
-                placeholder="Ej. PAP-BOND-75"
-                className="form-input text-sm font-mono font-bold"
-              />
-            </div>
+                <Grid size={{ xs: 12, sm: 4 }}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel id="unidad-label">Unidad de Medida *</InputLabel>
+                    <Select
+                      labelId="unidad-label"
+                      value={unidadMedida}
+                      label="Unidad de Medida *"
+                      onChange={(e) => setUnidadMedida(e.target.value)}
+                    >
+                      {UNIDADES_MEDIDA.map((u) => (
+                        <MenuItem key={u} value={u}>
+                          {u}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
 
-            <div>
-              <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
-                Unidad de Medida *
-              </label>
-              <input
-                type="text"
-                required
-                value={unidadMedida}
-                onChange={(e) => setUnidadMedida(e.target.value)}
-                placeholder="PLIEGOS, KG, UNIDADES..."
-                className="form-input text-sm font-bold uppercase"
-              />
-            </div>
-          </div>
+                <Grid size={{ xs: 12 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Descripci贸n del Insumo / Especificaciones T茅cnicas *"
+                    placeholder="Ej. Papel Bond 75g Tama帽o Oficio 65 x 90 cm blanco"
+                    value={descripcion}
+                    onChange={(e) => setDescripcion(e.target.value)}
+                    required
+                    helperText="Nombre comercial, gramaje, dimensiones o caracter铆sticas principales"
+                  />
+                </Grid>
+              </Grid>
+            </Box>
 
-          <div>
-            <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
-              Descripci髇 del Insumo *
-            </label>
-            <input
-              type="text"
-              required
-              value={descripcion}
-              onChange={(e) => setDescripcion(e.target.value)}
-              placeholder="Ej. Papel Bond 75g tama駉 65 x 90 cm"
-              className="form-input text-sm"
-            />
-          </div>
+            <Divider sx={{ my: 3, borderColor: UAGRM_COLORS.border }} />
 
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
-                Stock Inicial
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={stockActual}
-                onChange={(e) => setStockActual(parseFloat(e.target.value) || 0)}
-                className="form-input text-right font-mono font-bold"
-              />
-            </div>
+            {/* Secci贸n 2: Control de Stock y Par谩metros Operativos */}
+            <Box sx={{ mb: 3.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                <Box
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 2,
+                    backgroundColor: alpha(UAGRM_COLORS.red.main, 0.08),
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: UAGRM_COLORS.red.main,
+                  }}
+                >
+                  <Package size={18} />
+                </Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 780, color: UAGRM_COLORS.blue.dark }}>
+                  2. Par谩metros de Inventario y Seguridad
+                </Typography>
+              </Box>
 
-            <div>
-              <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
-                Stock M韓imo
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={stockMinimo}
-                onChange={(e) => setStockMinimo(parseFloat(e.target.value) || 0)}
-                className="form-input text-right font-mono font-bold"
-              />
-            </div>
+              <Grid container spacing={2.5}>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    type="number"
+                    label="Stock Actual en Kardex *"
+                    value={stockActual}
+                    onChange={(e) => setStockActual(e.target.value)}
+                    required
+                    slotProps={{
+                      input: {
+                        endAdornment: <InputAdornment position="end">{unidadMedida}</InputAdornment>,
+                      },
+                    }}
+                    helperText="Saldo f铆sico actual en taller o dep贸sito"
+                  />
+                </Grid>
 
-            <div>
-              <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
-                Costo Reposici髇 (Bs.)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={costoReposicion}
-                onChange={(e) => setCostoReposicion(parseFloat(e.target.value) || 0)}
-                className="form-input text-right font-mono font-bold"
-              />
-            </div>
-          </div>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    type="number"
+                    label="Stock M铆nimo de Seguridad *"
+                    value={stockMinimo}
+                    onChange={(e) => setStockMinimo(e.target.value)}
+                    required
+                    slotProps={{
+                      input: {
+                        endAdornment: <InputAdornment position="end">{unidadMedida}</InputAdornment>,
+                      },
+                    }}
+                    helperText="Umbral que dispara alertas para reposici贸n y compras"
+                  />
+                </Grid>
+              </Grid>
+            </Box>
 
-          <button
-            type="submit"
-            disabled={guardando}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#800000] py-3 px-4 font-bold text-white shadow hover:bg-[#670000] transition disabled:opacity-60 cursor-pointer pt-3"
+            <Divider sx={{ my: 3, borderColor: UAGRM_COLORS.border }} />
+
+            {/* Secci贸n 3: Costos de Reposici贸n */}
+            <Box sx={{ mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                <Box
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 2,
+                    backgroundColor: alpha('#15803d', 0.1),
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#15803d',
+                  }}
+                >
+                  <DollarSign size={18} />
+                </Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 780, color: UAGRM_COLORS.blue.dark }}>
+                  3. Costos de Reposici贸n y Cotizaci贸n
+                </Typography>
+              </Box>
+
+              <Grid container spacing={2.5}>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    type="number"
+                    label="Costo Unitario de Reposici贸n (Bs.) *"
+                    value={costoReposicion}
+                    onChange={(e) => setCostoReposicion(e.target.value)}
+                    required
+                    slotProps={{
+                      htmlInput: { step: '0.01', min: '0' },
+                      input: {
+                        startAdornment: <InputAdornment position="start">Bs.</InputAdornment>,
+                        endAdornment: <InputAdornment position="end">por {unidadMedida}</InputAdornment>,
+                      },
+                    }}
+                    helperText="Costo base utilizado para calcular presupuestos de proformas"
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+          </CardContent>
+
+          {/* Barra inferior de acciones */}
+          <Box
+            sx={{
+              p: 2.5,
+              px: { xs: 2.5, sm: 4 },
+              backgroundColor: '#f8fafc',
+              borderTop: `1px solid ${UAGRM_COLORS.border}`,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: 2.5,
+            }}
           >
-            {guardando ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-            <span>Guardar Insumo</span>
-          </button>
+            <Button
+              component={Link}
+              to="/insumos"
+              disabled={guardando}
+              sx={{
+                backgroundColor: '#607285',
+                color: '#ffffff',
+                fontWeight: 700,
+                px: 3.5,
+                py: 1.1,
+                borderRadius: 50.5,
+                textTransform: 'none',
+                fontSize: '0.875rem',
+                minWidth: 125,
+                '&:hover': {
+                  backgroundColor: '#4f5e6d',
+                },
+              }}
+            >
+              Cancelar
+            </Button>
+
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={guardando}
+              endIcon={guardando ? <CircularProgress size={16} color="inherit" /> : <Check size={18} />}
+              sx={{
+                backgroundColor: '#1e2b4d',
+                color: '#ffffff',
+                fontWeight: 700,
+                px: 3.5,
+                py: 1.1,
+                borderRadius: 2.5,
+                textTransform: 'none',
+                fontSize: '0.875rem',
+                minWidth: 165,
+                boxShadow: '0 2px 8px rgba(30, 43, 77, 0.25)',
+                '&:hover': {
+                  backgroundColor: '#141d34',
+                },
+                '&.Mui-disabled': {
+                  backgroundColor: '#1e2b4d',
+                  color: '#ffffff',
+                  opacity: 0.65,
+                },
+              }}
+            >
+              {guardando ? 'Confirmando...' : 'Confirmar'}
+            </Button>
+          </Box>
         </form>
-      </div>
-    </div>
-  )
+      </Card>
+    </Box>
+  );
 }

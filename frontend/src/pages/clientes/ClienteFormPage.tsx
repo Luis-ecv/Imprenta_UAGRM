@@ -1,6 +1,6 @@
 ﻿import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Users, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
+import { ArrowLeft, Users, Check, AlertCircle, Loader2 } from 'lucide-react'
 import { clientesApi } from '@/api/clientes.api'
 import type { TipoCliente } from '@/types'
 
@@ -152,14 +152,22 @@ export function ClienteFormPage() {
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={guardando}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#800000] py-3 px-4 font-bold text-white shadow hover:bg-[#670000] transition disabled:opacity-60 cursor-pointer pt-3"
-          >
-            {guardando ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-            <span>Guardar Solicitante</span>
-          </button>
+          <div className="flex items-center justify-center gap-3 pt-3">
+            <Link
+              to="/clientes"
+              className="flex items-center justify-center rounded-full bg-[#607285] px-6 py-2.5 text-sm font-bold text-white shadow hover:bg-[#4f5e6d] transition min-w-[125px]"
+            >
+              Cancelar
+            </Link>
+            <button
+              type="submit"
+              disabled={guardando}
+              className="flex items-center justify-center gap-2 rounded-full bg-[#1e2b4d] px-6 py-2.5 text-sm font-bold text-white shadow hover:bg-[#141d34] transition disabled:opacity-60 cursor-pointer min-w-[165px]"
+            >
+              {guardando ? <Loader2 size={16} className="animate-spin" /> : <Check size={18} />}
+              <span>Confirmar</span>
+            </button>
+          </div>
         </form>
       </div>
     </div>

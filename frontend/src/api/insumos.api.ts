@@ -1,8 +1,10 @@
-﻿import apiClient from './client'
+import apiClient from './client'
 import type {
   InsumoResponse,
   InsumoCreate,
   InsumoUpdate,
+  CategoriaInsumoCreate,
+  CategoriaInsumoResponse,
   MovimientoInventarioCreate,
   MovimientoInventarioResponse,
   RespuestaPaginada,
@@ -32,11 +34,23 @@ export const insumosApi = {
     return data
   },
   obtenerAlertas: async (): Promise<InsumoResponse[]> => {
-    const { data } = await apiClient.get<InsumoResponse[]>('/insumos/alertas')
-    return data
+    const { data } = await apiClient.get<RespuestaPaginada<InsumoResponse>>('/insumos', {
+      params: { por_pagina: 100 },
+    })
+    return (data.datos || []).filter(
+      (insumo) => insumo.alerta_stock || Number(insumo.stock_actual) <= Number(insumo.stock_minimo)
+    )
   },
   registrarMovimiento: async (payload: MovimientoInventarioCreate): Promise<MovimientoInventarioResponse> => {
-    const { data } = await apiClient.post<MovimientoInventarioResponse>('/insumos/movimientos', payload)
+    const { data } = await apiClient.post<MovimientoInventarioResponse>(`/insumos/${payload.insumo_id}/movimientos`, payload)
+    return data
+  },
+  listarCategorias: async (): Promise<CategoriaInsumoResponse[]> => {
+    const { data } = await apiClient.get<CategoriaInsumoResponse[]>('/insumos/categorias/')
+    return data
+  },
+  crearCategoria: async (payload: CategoriaInsumoCreate): Promise<CategoriaInsumoResponse> => {
+    const { data } = await apiClient.post<CategoriaInsumoResponse>('/insumos/categorias/', payload)
     return data
   },
 }

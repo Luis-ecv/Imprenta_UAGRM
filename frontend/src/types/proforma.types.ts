@@ -1,16 +1,19 @@
-﻿import type { Modalidad, EstadoProforma } from './common.types'
+import type { Modalidad, EstadoProforma } from './common.types'
 import type { ClienteResponse } from './cliente.types'
 
 export interface DetalleProformaCreate {
   descripcion_trabajo: string
   tipo_trabajo_id: number
   tiraje: number
-  numero_paginas: number
+  paginas_totales: number
+  numero_paginas?: number
   costo_papel: number
   costo_tinta: number
   costo_planchas: number
   costo_mano_obra: number
   subtotal: number
+  insumo_id?: number | null
+  tarifa_id?: number | null
 }
 
 export interface DetalleProformaResponse extends DetalleProformaCreate {

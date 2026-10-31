@@ -1,4 +1,4 @@
-﻿import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from './ProtectedRoute'
 import { RoleRoute } from './RoleRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
@@ -24,6 +24,8 @@ import { OrdenDetallePage } from '@/pages/ordenes/OrdenDetallePage'
 import { ConsumoRealPage } from '@/pages/ordenes/ConsumoRealPage'
 import { ComprasPage } from '@/pages/compras/ComprasPage'
 import { CompraFormPage } from '@/pages/compras/CompraFormPage'
+import { CompraDetallePage } from '@/pages/compras/CompraDetallePage'
+import { ProveedoresPage } from '@/pages/proveedores/ProveedoresPage'
 import { PrediccionesPage } from '@/pages/predicciones/PrediccionesPage'
 import { ReportesPage } from '@/pages/reportes/ReportesPage'
 import { UsuariosPage } from '@/pages/administracion/UsuariosPage'
@@ -78,10 +80,12 @@ export function AppRouter() {
           <Route path="/ordenes/:id" element={<OrdenDetallePage />} />
           <Route path="/ordenes/:id/consumo" element={<ConsumoRealPage />} />
 
-          {/* Compras */}
+          {/* Compras & Proveedores */}
           <Route element={<RoleRoute rolesPermitidos={['Superadministrador', 'Administrador']} />}>
             <Route path="/compras" element={<ComprasPage />} />
             <Route path="/compras/nueva" element={<CompraFormPage />} />
+            <Route path="/compras/:id" element={<CompraDetallePage />} />
+            <Route path="/proveedores" element={<ProveedoresPage />} />
           </Route>
 
           {/* Predicciones Machine Learning */}

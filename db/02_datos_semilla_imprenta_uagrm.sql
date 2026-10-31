@@ -19,7 +19,7 @@ SELECT setval(pg_get_serial_sequence('rol', 'id_rol'), coalesce(max(id_rol), 1))
 
 -- 2. Usuarios Iniciales (Hash bcrypt de 'Uagrm2026*')
 INSERT INTO usuario (id_usuario, rol_id, nombre_completo, email, password_hash, activo) VALUES
-(1, 1, 'Luis Eduardo Céspedes (Superadmin)', 'superadmin@uagrm.edu.bo', '$2b$12$mintm4Sptdb2momaflVl8OJ.xjyMG8bso7/SRKO4zX0Pb/l98qo52', TRUE),
+(1, 1, 'Luis Eduardo Céspedes', 'superadmin@uagrm.edu.bo', '$2b$12$mintm4Sptdb2momaflVl8OJ.xjyMG8bso7/SRKO4zX0Pb/l98qo52', TRUE),
 (2, 2, 'Ing. Carlos Mendoza (Jefe Imprenta)', 'administrador@uagrm.edu.bo', '$2b$12$mintm4Sptdb2momaflVl8OJ.xjyMG8bso7/SRKO4zX0Pb/l98qo52', TRUE),
 (3, 3, 'Lic. María Elena Ramos (Recepción)', 'mostrador@uagrm.edu.bo', '$2b$12$mintm4Sptdb2momaflVl8OJ.xjyMG8bso7/SRKO4zX0Pb/l98qo52', TRUE),
 (4, 4, 'Téc. Roberto Justiniano (Maquinista)', 'taller@uagrm.edu.bo', '$2b$12$mintm4Sptdb2momaflVl8OJ.xjyMG8bso7/SRKO4zX0Pb/l98qo52', TRUE),

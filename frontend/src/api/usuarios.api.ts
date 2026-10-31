@@ -1,4 +1,4 @@
-﻿import apiClient from './client'
+import apiClient from './client'
 import type {
   UsuarioResponse,
   UsuarioCreate,
@@ -31,7 +31,14 @@ export const usuariosApi = {
     return data
   },
   listarRoles: async (): Promise<RolResponse[]> => {
-    const { data } = await apiClient.get<RolResponse[]>('/usuarios/roles')
-    return data
+    //    const { data } = await apiClient.get<RolResponse[]>('/usuarios/roles')
+    // return data
+    return [
+      { id_rol: 1, nombre: 'Superadministrador', descripcion: 'Acceso total y auditoría institucional' },
+      { id_rol: 2, nombre: 'Administrador', descripcion: 'Jefe de imprenta y supervisión general' },
+      { id_rol: 3, nombre: 'Operador Mostrador', descripcion: 'Atención al cliente, cotizaciones y pedidos' },
+      { id_rol: 4, nombre: 'Operador Taller', descripcion: 'Producción gráfica, prensas y acabados' },
+      { id_rol: 5, nombre: 'Cliente', descripcion: 'Delegado facultativo o solicitante' },
+    ]
   },
 }

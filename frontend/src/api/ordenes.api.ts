@@ -27,7 +27,7 @@ export const ordenesApi = {
     return data
   },
   registrarConsumoReal: async (idOrden: number, payload: ConsumoRealCreate): Promise<ConsumoRealResponse> => {
-    const { data } = await apiClient.post<ConsumoRealResponse>(`/ordenes/${idOrden}/consumo-real`, payload)
+    const { data } = await apiClient.post<ConsumoRealResponse>(`/ordenes/${idOrden}/consumos`, payload)
     return data
   },
 }

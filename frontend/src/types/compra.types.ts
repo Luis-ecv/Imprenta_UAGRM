@@ -1,7 +1,25 @@
-﻿export interface ProveedorResponse {
+export interface ProveedorResponse {
   id_proveedor: number
   razon_social: string
   nit: string
+  contacto?: string | null
+  telefono?: string | null
+  email?: string | null
+  direccion?: string | null
+}
+
+export interface ProveedorCreate {
+  razon_social: string
+  nit: string
+  contacto?: string | null
+  telefono?: string | null
+  email?: string | null
+  direccion?: string | null
+}
+
+export interface ProveedorUpdate {
+  razon_social?: string
+  nit?: string
   contacto?: string | null
   telefono?: string | null
   email?: string | null

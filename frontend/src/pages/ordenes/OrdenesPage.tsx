@@ -1,102 +1,88 @@
-﻿import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import Box from '@mui/material/Box'
+import Typography from '@mui/material/Typography'
+import Button from '@mui/material/Button'
+import IconButton from '@mui/material/IconButton'
+import TextField from '@mui/material/TextField'
+import InputAdornment from '@mui/material/InputAdornment'
+import CircularProgress from '@mui/material/CircularProgress'
+import Alert from '@mui/material/Alert'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogActions from '@mui/material/DialogActions'
+import Grid from '@mui/material/Grid'
+import MenuItem from '@mui/material/MenuItem'
+import Paper from '@mui/material/Paper'
+import Stack from '@mui/material/Stack'
 import {
-  LayoutDashboard,
-  Clock3,
-  Printer,
-  Scissors,
-  CheckCircle2,
-  PackageCheck,
-  ArrowRight,
-  Loader2,
-  AlertCircle,
-  Layers,
-  Droplet,
-  Archive,
-  Info,
+  Search,
   X,
-  AlertOctagon,
+  RefreshCw,
+  Check,
+  CheckCircle2,
+  Printer,
 } from 'lucide-react'
 import { ordenesApi } from '@/api/ordenes.api'
 import { insumosApi } from '@/api/insumos.api'
-import type { OrdenTrabajoResponse, EstadoOrden, InsumoResponse } from '@/types'
+import { UAGRM_COLORS } from '@/theme/uagrmTheme'
+import type { OrdenTrabajoResponse, InsumoResponse, EstadoOrden } from '@/types'
 import { formatearFecha } from '@/utils/formatters'
-import { TRANSICIONES_ESTADO, COLORES_PRIORIDAD } from '@/utils/constants'
+import { TRANSICIONES_ESTADO } from '@/utils/constants'
 
-interface ColumnaKanban {
+// Definición secuencial exacta de las 6 estaciones de la imprenta litográfica
+interface EtapaLitografica {
   id: EstadoOrden
-  titulo: string
-  subtitulo: string
-  icono: React.ElementType
-  colorBorde: string
-  colorIcono: string
-  colorFondo: string
+  label: string
+  color: string
 }
 
-const COLUMNAS_KANBAN: ColumnaKanban[] = [
-  {
-    id: 'REGISTRADO',
-    titulo: 'Registradas',
-    subtitulo: 'Ingreso inicial',
-    icono: LayoutDashboard,
-    colorBorde: 'border-slate-300',
-    colorIcono: 'text-slate-500',
-    colorFondo: 'bg-slate-100',
-  },
-  {
-    id: 'EN COLA',
-    titulo: 'En Cola',
-    subtitulo: 'Pre-prensa / CTP',
-    icono: Clock3,
-    colorBorde: 'border-amber-400',
-    colorIcono: 'text-amber-600',
-    colorFondo: 'bg-amber-50',
-  },
-  {
-    id: 'EN IMPRESION',
-    titulo: 'En Impresión',
-    subtitulo: 'Prensa Offset',
-    icono: Printer,
-    colorBorde: 'border-sky-500',
-    colorIcono: 'text-sky-600',
-    colorFondo: 'bg-sky-50',
-  },
-  {
-    id: 'EN ACABADO',
-    titulo: 'En Acabado',
-    subtitulo: 'Corte y encuadernado',
-    icono: Scissors,
-    colorBorde: 'border-purple-500',
-    colorIcono: 'text-purple-600',
-    colorFondo: 'bg-purple-50',
-  },
-  {
-    id: 'FINALIZADO',
-    titulo: 'Finalizadas',
-    subtitulo: 'Control de calidad',
-    icono: CheckCircle2,
-    colorBorde: 'border-emerald-500',
-    colorIcono: 'text-emerald-600',
-    colorFondo: 'bg-emerald-50',
-  },
-  {
-    id: 'ENTREGADO',
-    titulo: 'Entregadas',
-    subtitulo: 'Despachado a cliente',
-    icono: PackageCheck,
-    colorBorde: 'border-teal-500',
-    colorIcono: 'text-teal-600',
-    colorFondo: 'bg-teal-50',
-  },
+const ETAPAS_LITOGRAFICAS: EtapaLitografica[] = [
+  { id: 'REGISTRADO', label: 'Registradas', color: '#64748b' },
+  { id: 'EN COLA', label: 'En cola', color: '#b45309' },
+  { id: 'EN IMPRESION', label: 'En impresión', color: '#1d4ed8' },
+  { id: 'EN ACABADO', label: 'En acabado', color: '#7c3aed' },
+  { id: 'FINALIZADO', label: 'Finalizadas', color: '#047857' },
+  { id: 'ENTREGADO', label: 'Entregadas', color: '#0f766e' },
 ]
+
+// Cálculo reactivo de días restantes para la fecha de compromiso
+function calcularCompromiso(fechaStr?: string | null) {
+  if (!fechaStr) return { texto: 'Sin fecha', nivel: 'normal', dias: 999 }
+  const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
+  const partes = fechaStr.split('-')
+  const compromiso = new Date(Number(partes[0]), Number(partes[1]) - 1, Number(partes[2]))
+  compromiso.setHours(0, 0, 0, 0)
+
+  const diffTime = compromiso.getTime() - hoy.getTime()
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24))
+
+  if (diffDays < 0) {
+    return { texto: `Vencida (${Math.abs(diffDays)}d)`, nivel: 'vencida', dias: diffDays }
+  }
+  if (diffDays === 0) {
+    return { texto: 'Vence hoy', nivel: 'hoy', dias: 0 }
+  }
+  if (diffDays === 1) {
+    return { texto: 'En 1 día', nivel: 'urgente', dias: 1 }
+  }
+  if (diffDays <= 7) {
+    return { texto: `En ${diffDays} días`, nivel: 'semana', dias: diffDays }
+  }
+  return { texto: `En ${diffDays} días`, nivel: 'normal', dias: diffDays }
+}
 
 export function OrdenesPage() {
   const [ordenes, setOrdenes] = useState<OrdenTrabajoResponse[]>([])
   const [insumos, setInsumos] = useState<InsumoResponse[]>([])
   const [cargando, setCargando] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
-  const [ordenParaCierre, setOrdenParaCierre] = useState<OrdenTrabajoResponse | null>(null)
+  const [busqueda, setBusqueda] = useState<string>('')
+  const [filtroTab, setFiltroTab] = useState<string>('TODAS')
 
-  // Estados del modal de cierre técnico
+  // Modal de Cierre Técnico
+  const [ordenParaCierre, setOrdenParaCierre] = useState<OrdenTrabajoResponse | null>(null)
   const [insumoId, setInsumoId] = useState<number | ''>('')
   const [papelUtilizado, setPapelUtilizado] = useState<string>('500')
   const [papelMerma, setPapelMerma] = useState<string>('15')
@@ -111,7 +97,7 @@ export function OrdenesPage() {
       setCargando(true)
       setError(null)
       const [resOrdenes, resInsumos] = await Promise.all([
-        ordenesApi.listar({ por_pagina: 100 }),
+        ordenesApi.listar({ por_pagina: 150 }),
         insumosApi.listar({ por_pagina: 100 }),
       ])
       setOrdenes(resOrdenes.datos || [])
@@ -195,310 +181,860 @@ export function OrdenesPage() {
     }
   }
 
-  return (
-    <div className="space-y-6">
-      {/* Encabezado */}
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#55a6bc]">Centro de Operaciones</p>
-          <h1 className="text-3xl font-extrabold tracking-tight text-[#263454]">
-            Tablero de Producción Litográfica
-          </h1>
-          <p className="text-sm text-slate-500">
-            Supervisa el flujo secuencial de los trabajos en prensa offset, acabados y registro de mermas.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700">
-            {ordenes.length} Órdenes Activas
-          </span>
-        </div>
-      </div>
+  // Pestañas dinámicas con conteo
+  const tabsFiltro = useMemo(() => {
+    const conteo = {
+      TODAS: ordenes.length,
+      PROCESO: ordenes.filter((o) => o.estado_actual !== 'ENTREGADO').length,
+      VENCEN_7D: ordenes.filter((o) => {
+        const c = calcularCompromiso(o.fecha_compromiso)
+        return o.estado_actual !== 'ENTREGADO' && c.dias >= 0 && c.dias <= 7
+      }).length,
+      ALTA: ordenes.filter((o) => o.prioridad === 'URGENTE').length,
+      ENTREGADAS: ordenes.filter((o) => o.estado_actual === 'ENTREGADO').length,
+    }
 
-      {/* Alerta de Error */}
+    return [
+      { key: 'TODAS', label: 'Todas', count: conteo.TODAS },
+      { key: 'PROCESO', label: 'En Proceso', count: conteo.PROCESO },
+      { key: 'VENCEN_7D', label: 'Vencen en 7 días', count: conteo.VENCEN_7D },
+      { key: 'ALTA', label: 'Prioridad Urgente / Alta', count: conteo.ALTA },
+      { key: 'ENTREGADAS', label: 'Entregadas', count: conteo.ENTREGADAS },
+    ]
+  }, [ordenes])
+
+  // Filtrado reactivo de órdenes
+  const ordenesFiltradas = useMemo(() => {
+    return ordenes.filter((o) => {
+      // Filtro pestaña
+      if (filtroTab === 'PROCESO' && o.estado_actual === 'ENTREGADO') return false
+      if (filtroTab === 'VENCEN_7D') {
+        const c = calcularCompromiso(o.fecha_compromiso)
+        if (o.estado_actual === 'ENTREGADO' || c.dias < 0 || c.dias > 7) return false
+      }
+      if (filtroTab === 'ALTA' && o.prioridad !== 'URGENTE') return false
+      if (filtroTab === 'ENTREGADAS' && o.estado_actual !== 'ENTREGADO') return false
+
+      // Filtro texto
+      const termino = busqueda.toLowerCase().trim()
+      if (!termino) return true
+
+      const desc = o.proforma?.detalles?.[0]?.descripcion_trabajo?.toLowerCase() || ''
+      const cliente = o.proforma?.cliente?.razon_social?.toLowerCase() || ''
+      const codigo = o.codigo_ot.toLowerCase()
+
+      return desc.includes(termino) || cliente.includes(termino) || codigo.includes(termino)
+    })
+  }, [ordenes, busqueda, filtroTab])
+
+  // Estilo visual del botón de acción según la etapa destino
+  const getActionConfig = (orden: OrdenTrabajoResponse) => {
+    const siguiente = TRANSICIONES_ESTADO[orden.estado_actual]
+    if (!siguiente) {
+      return {
+        esFinal: true,
+        label: '✓ Entregada',
+        color: '#047857',
+        bg: 'transparent',
+        border: 'transparent',
+      }
+    }
+
+    switch (siguiente) {
+      case 'EN COLA':
+        return {
+          esFinal: false,
+          label: 'Enviar a cola ➔',
+          color: '#9a3412',
+          border: '#ea580c',
+          bgHover: '#fff7ed',
+        }
+      case 'EN IMPRESION':
+        return {
+          esFinal: false,
+          label: 'Enviar a impresión ➔',
+          color: '#1d4ed8',
+          border: '#2563eb',
+          bgHover: '#eff6ff',
+        }
+      case 'EN ACABADO':
+        return {
+          esFinal: false,
+          label: 'Pasar a acabado ➔',
+          color: '#7c3aed',
+          border: '#8b5cf6',
+          bgHover: '#faf5ff',
+        }
+      case 'FINALIZADO':
+        return {
+          esFinal: false,
+          label: 'Marcar finalizada ➔',
+          color: '#047857',
+          border: '#059669',
+          bgHover: '#ecfdf5',
+        }
+      case 'ENTREGADO':
+        return {
+          esFinal: false,
+          label: 'Entregar a cliente ➔',
+          color: '#0f766e',
+          border: '#0d9488',
+          bgHover: '#f0fdfa',
+        }
+      default:
+        return {
+          esFinal: false,
+          label: `Avanzar a ${siguiente} ➔`,
+          color: '#1e2b4d',
+          border: '#1e2b4d',
+          bgHover: '#f8fafc',
+        }
+    }
+  }
+
+  return (
+    <Box sx={{ p: { xs: 1.5, sm: 2.5 } }}>
+      {/* 1. Encabezado Oficial UAGRM */}
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', sm: 'row' },
+          justifyContent: 'space-between',
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          gap: 2,
+          mb: 3,
+        }}
+      >
+        <Box>
+          {/* <Typography
+            variant="overline"
+            sx={{
+              color: '#0284c7',
+              fontWeight: 800,
+              letterSpacing: '0.12em',
+              fontSize: '0.75rem',
+              display: 'block',
+              mb: 0.5,
+            }}
+          >
+            CENTRO DE OPERACIONES Y TALLER
+          </Typography> */}
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 800,
+              color: '#1e2b4d',
+              letterSpacing: '-0.02em',
+              mb: 0.5,
+            }}
+          >
+            Tablero de Producción Litográfica
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>
+            Supervisa el flujo secuencial de los trabajos en prensa offset, acabados y registro de mermas.
+          </Typography>
+        </Box>
+
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', width: { xs: '100%', sm: 'auto' } }}>
+          <Button
+            variant="outlined"
+            onClick={cargarOrdenes}
+            disabled={cargando}
+            startIcon={<RefreshCw size={16} className={cargando ? 'animate-spin' : ''} />}
+            sx={{
+              borderRadius: 50,
+              textTransform: 'none',
+              fontWeight: 700,
+              color: '#475569',
+              borderColor: '#e2e8f0',
+              backgroundColor: '#ffffff',
+              px: 2.2,
+              py: 0.9,
+              '&:hover': {
+                borderColor: '#cbd5e1',
+                backgroundColor: '#f8fafc',
+              },
+            }}
+          >
+            Actualizar
+          </Button>
+        </Stack>
+      </Box>
+
+      {/* Alerta de Error General */}
       {error && (
-        <div className="flex items-center gap-3 p-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-sm">
-          <AlertCircle size={20} className="shrink-0 text-rose-600" />
-          <span>{error}</span>
-        </div>
+        <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
       )}
 
-      {/* Tablero Kanban */}
-      {cargando ? (
-        <div className="flex flex-col items-center justify-center min-h-[40vh] gap-3 text-slate-500">
-          <Loader2 className="h-8 w-8 animate-spin text-[#800000]" />
-          <p className="text-sm font-semibold">Cargando tablero operativo de taller...</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 items-start">
-          {COLUMNAS_KANBAN.map((columna) => {
-            const IconoColumna = columna.icono
-            const ordenesEnColumna = ordenes.filter((o) => o.estado_actual === columna.id)
+      {/* 2. Buscador Alargado y Pestañas Horizontales */}
+      <Box sx={{ mb: 2.5 }}>
+        <TextField
+          size="small"
+          placeholder="Buscar por código, trabajo o cliente..."
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={18} color="#94a3b8" />
+                </InputAdornment>
+              ),
+              endAdornment: busqueda ? (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={() => setBusqueda('')}>
+                    <X size={14} />
+                  </IconButton>
+                </InputAdornment>
+              ) : null,
+            },
+          }}
+          sx={{
+            maxWidth: { xs: '100%', md: 740 },
+            width: '100%',
+            mb: 2.5,
+            backgroundColor: '#ffffff',
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 3,
+              backgroundColor: '#ffffff',
+              '& fieldset': {
+                borderColor: '#e2e8f0',
+              },
+              '&:hover fieldset': {
+                borderColor: '#cbd5e1',
+              },
+            },
+          }}
+        />
 
+        {/* Pestañas horizontales idénticas al estándar: activo y hover en negro y negrita */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: { xs: 2.5, sm: 4 },
+            borderBottom: '1px solid #e8e4dc',
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            scrollbarWidth: 'none',
+            '&::-webkit-scrollbar': { display: 'none' },
+            msOverflowStyle: 'none',
+            pb: 0,
+          }}
+        >
+          {tabsFiltro.map((tab) => {
+            const isActive = filtroTab === tab.key
             return (
-              <div
-                key={columna.id}
-                className="flex flex-col rounded-2xl bg-slate-100/80 border border-slate-200 p-3 min-h-[550px]"
+              <Box
+                key={tab.key}
+                component="button"
+                onClick={() => setFiltroTab(tab.key)}
+                sx={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  pb: 1.2,
+                  px: 0.5,
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.8,
+                  fontFamily: 'inherit',
+                  fontSize: '0.925rem',
+                  fontWeight: isActive ? 800 : 500,
+                  color: isActive ? '#000000' : '#64748b',
+                  transition: 'all 0.15s ease',
+                  whiteSpace: 'nowrap',
+                  '&:hover': {
+                    color: '#000000',
+                    fontWeight: 800,
+                  },
+                  '&:hover span': {
+                    color: '#000000',
+                    fontWeight: 800,
+                  },
+                  '&::after': isActive
+                    ? {
+                        content: '""',
+                        position: 'absolute',
+                        bottom: -1,
+                        left: 0,
+                        right: 0,
+                        height: '2.5px',
+                        backgroundColor: '#000000',
+                        borderRadius: '2px 2px 0 0',
+                      }
+                    : undefined,
+                }}
               >
-                {/* Cabecera de la Columna */}
-                <div className={`flex items-center justify-between p-2.5 rounded-xl border-l-4 ${columna.colorBorde} bg-white shadow-sm mb-3`}>
-                  <div className="flex items-center gap-2">
-                    <IconoColumna size={18} className={columna.colorIcono} />
-                    <div>
-                      <h2 className="text-xs font-bold text-slate-800 leading-tight">{columna.titulo}</h2>
-                      <p className="text-[10px] text-slate-400">{columna.subtitulo}</p>
-                    </div>
-                  </div>
-                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-[11px] font-bold text-slate-700">
-                    {ordenesEnColumna.length}
-                  </span>
-                </div>
-
-                {/* Tarjetas de la Columna */}
-                <div className="space-y-3 flex-1 overflow-y-auto">
-                  {ordenesEnColumna.map((orden) => {
-                    const detalle = orden.detalles_orden?.[0]
-                    const proformaDetalle = orden.proforma?.detalles?.[0]
-                    const siguienteEstado = TRANSICIONES_ESTADO[orden.estado_actual]
-                    const estiloPrioridad = COLORES_PRIORIDAD[orden.prioridad] || 'bg-slate-100 text-slate-700'
-
-                    return (
-                      <div
-                        key={orden.id_orden}
-                        className="flex flex-col justify-between p-3.5 rounded-xl bg-white border border-slate-200 shadow-sm hover:shadow-md transition space-y-3"
-                      >
-                        <div>
-                          <div className="flex items-center justify-between gap-1 mb-1.5">
-                            <span className="font-mono text-xs font-bold text-[#800000]">
-                              {orden.codigo_ot}
-                            </span>
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${estiloPrioridad}`}>
-                              {orden.prioridad}
-                            </span>
-                          </div>
-
-                          <h3 className="text-xs font-bold text-slate-800 line-clamp-2 leading-snug">
-                            {proformaDetalle?.descripcion_trabajo || `Trabajo OT #${orden.id_orden}`}
-                          </h3>
-
-                          <p className="text-[11px] text-slate-500 mt-1">
-                            {orden.proforma?.cliente?.razon_social || 'Cliente UAGRM'}
-                          </p>
-
-                          {detalle && (
-                            <div className="mt-2 text-[10px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                              <p><strong>Corte:</strong> {detalle.formato_corte}</p>
-                              <p><strong>Acabado:</strong> {detalle.tipo_encuadernacion}</p>
-                            </div>
-                          )}
-
-                          <div className="mt-2 text-[10px] text-slate-400">
-                            Compromiso: <span className="font-semibold text-slate-600">{formatearFecha(orden.fecha_compromiso)}</span>
-                          </div>
-                        </div>
-
-                        {/* Botón de Avance de Estado */}
-                        {siguienteEstado && (
-                          <button
-                            type="button"
-                            onClick={() => handleAvanzarEstado(orden)}
-                            className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-[#1f2d49] hover:bg-[#17233b] text-white text-xs font-bold transition shadow-sm cursor-pointer"
-                          >
-                            <span>
-                              {siguienteEstado === 'FINALIZADO' ? 'Cierre Técnico' : siguienteEstado}
-                            </span>
-                            <ArrowRight size={13} />
-                          </button>
-                        )}
-                      </div>
-                    )
-                  })}
-
-                  {ordenesEnColumna.length === 0 && (
-                    <div className="p-4 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl">
-                      Sin órdenes en esta etapa
-                    </div>
-                  )}
-                </div>
-              </div>
+                <span>{tab.label}</span>
+                <Typography
+                  component="span"
+                  sx={{
+                    fontSize: '0.9rem',
+                    fontWeight: isActive ? 800 : 500,
+                    color: isActive ? '#000000' : '#64748b',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {tab.count}
+                </Typography>
+              </Box>
             )
           })}
-        </div>
+        </Box>
+      </Box>
+
+      {/* 3. Lista de Órdenes con Stepper Horizontal de Proceso */}
+      {cargando ? (
+        <Box
+          sx={{
+            p: 8,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 2,
+            backgroundColor: '#ffffff',
+            borderRadius: 3,
+            border: '1px solid #ebe6df',
+          }}
+        >
+          <CircularProgress size={36} sx={{ color: UAGRM_COLORS.blue.main }} />
+          <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 600 }}>
+            Cargando flujo del taller litográfico...
+          </Typography>
+        </Box>
+      ) : ordenesFiltradas.length === 0 ? (
+        <Paper
+          elevation={0}
+          sx={{
+            py: 8,
+            px: 3,
+            textAlign: 'center',
+            backgroundColor: '#ffffff',
+            borderRadius: 3,
+            border: '1px dashed #cbd5e1',
+          }}
+        >
+          <Printer size={44} color="#94a3b8" style={{ margin: '0 auto 12px' }} />
+          <Typography variant="h6" sx={{ fontWeight: 800, color: '#1e2b4d', mb: 0.5 }}>
+            No hay órdenes de trabajo en esta etapa
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#64748b', maxWidth: 440, mx: 'auto' }}>
+            Prueba cambiando el filtro de búsqueda o genera una nueva orden aprobando una proforma en mostrador.
+          </Typography>
+        </Paper>
+      ) : (
+        <Stack spacing={2}>
+          {ordenesFiltradas.map((orden) => {
+            const detalle = orden.detalles_orden?.[0]
+            const proformaDetalle = orden.proforma?.detalles?.[0]
+            const compromisoInfo = calcularCompromiso(orden.fecha_compromiso)
+            const action = getActionConfig(orden)
+
+            // Posición de la etapa actual (0 a 5)
+            const currentStageIndex = ETAPAS_LITOGRAFICAS.findIndex((e) => e.id === orden.estado_actual)
+            const activeStage = ETAPAS_LITOGRAFICAS[currentStageIndex] || ETAPAS_LITOGRAFICAS[0]
+            const accentColor = activeStage.color
+
+            // Badge de prioridad
+            const esUrgente = orden.prioridad === 'URGENTE'
+
+            return (
+              <Paper
+                key={orden.id_orden}
+                elevation={0}
+                sx={{
+                  p: { xs: 2, sm: 2.5, md: 3 },
+                  borderRadius: 3.5,
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e8e4dc',
+                  transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
+                  '&:hover': {
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
+                    borderColor: '#cbd5e1',
+                  },
+                }}
+              >
+                <Grid container spacing={3} sx={{ alignItems: 'center' }}>
+                  {/* SECCIÓN 1: Identificación y Detalle Litográfico (Izquierda) */}
+                  <Grid size={{ xs: 12, md: 3.8 }}>
+                    <Box sx={{ pr: { md: 1 } }}>
+                      {/* Código + Prioridad Pill */}
+                      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 0.8 }}>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            
+                            fontWeight: 800,
+                            color: '#475569',
+                            fontSize: '0.85rem',
+                          }}
+                        >
+                          {orden.codigo_ot}
+                        </Typography>
+
+                        <Box
+                          component="span"
+                          sx={{
+                            borderRadius: 50,
+                            px: 1.2,
+                            py: 0.2,
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            backgroundColor: esUrgente ? '#fef2f2' : '#f1f5f9',
+                            color: esUrgente ? '#dc2626' : '#475569',
+                            border: `1px solid ${esUrgente ? '#fecaca' : '#e2e8f0'}`,
+                          }}
+                        >
+                          {orden.prioridad}
+                        </Box>
+                      </Stack>
+
+                      {/* Título del Trabajo en MAYÚSCULAS Y NEGRITA */}
+                      <Typography
+                        variant="subtitle1"
+                        sx={{
+                          fontWeight: 800,
+                          color: '#0f172a',
+                          fontSize: '0.98rem',
+                          lineHeight: 1.25,
+                          mb: 0.6,
+                        }}
+                      >
+                        {proformaDetalle?.descripcion_trabajo || `Trabajo OT #${orden.id_orden}`}
+                      </Typography>
+
+                      {/* Subtítulo: Cliente y especificaciones técnicas */}
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: '#64748b',
+                          fontSize: '0.8rem',
+                          lineHeight: 1.4,
+                          display: 'block',
+                        }}
+                      >
+                        {orden.proforma?.cliente?.razon_social || 'Cliente UAGRM'}
+                        {detalle?.formato_corte ? ` · ${detalle.formato_corte}` : ''}
+                        {detalle?.tipo_encuadernacion ? ` · ${detalle.tipo_encuadernacion}` : ''}
+                      </Typography>
+                    </Box>
+                  </Grid>
+
+                  {/* SECCIÓN 2: Stepper Horizontal Litográfico (Centro) */}
+                  <Grid size={{ xs: 12, md: 5.4 }}>
+                    <Box sx={{ px: { xs: 0, md: 1 } }}>
+                      {/* Contenedor Stepper */}
+                      <Box sx={{ position: 'relative', width: '100%', py: 1 }}>
+                        {/* Línea base completa gris */}
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            top: 15,
+                            left: '8%',
+                            right: '8%',
+                            height: '3px',
+                            backgroundColor: '#e2e8f0',
+                            zIndex: 1,
+                          }}
+                        />
+
+                        {/* Línea coloreada activa hasta el paso actual */}
+                        {currentStageIndex > 0 && (
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              top: 15,
+                              left: '8%',
+                              width: `${(currentStageIndex / (ETAPAS_LITOGRAFICAS.length - 1)) * 84}%`,
+                              height: '3px',
+                              backgroundColor: accentColor,
+                              transition: 'width 0.4s ease',
+                              zIndex: 2,
+                            }}
+                          />
+                        )}
+
+                        {/* Nodos y etiquetas de cada estación */}
+                        <Box
+                          sx={{
+                            position: 'relative',
+                            zIndex: 3,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'flex-start',
+                          }}
+                        >
+                          {ETAPAS_LITOGRAFICAS.map((etapa, idx) => {
+                            const isCompleted = idx < currentStageIndex
+                            const isCurrent = idx === currentStageIndex
+
+                            return (
+                              <Box
+                                key={etapa.id}
+                                sx={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  width: '16.6%',
+                                }}
+                              >
+                                {/* Punto circular del nodo */}
+                                <Box
+                                  sx={{
+                                    width: isCurrent ? 18 : 14,
+                                    height: isCurrent ? 18 : 14,
+                                    borderRadius: '50%',
+                                    backgroundColor: isCompleted
+                                      ? accentColor
+                                      : isCurrent
+                                      ? '#ffffff'
+                                      : '#ffffff',
+                                    border: isCompleted
+                                      ? `3px solid ${accentColor}`
+                                      : isCurrent
+                                      ? `4px solid ${accentColor}`
+                                      : '3px solid #cbd5e1',
+                                    transition: 'all 0.3s ease',
+                                    boxShadow: isCurrent ? `0 0 0 3px rgba(0,0,0,0.05)` : 'none',
+                                    mb: 0.8,
+                                  }}
+                                />
+
+                                {/* Texto de la estación debajo */}
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    fontSize: '0.68rem',
+                                    textAlign: 'center',
+                                    whiteSpace: 'nowrap',
+                                    fontWeight: isCurrent ? 800 : isCompleted ? 600 : 500,
+                                    color: isCurrent
+                                      ? '#0f172a'
+                                      : isCompleted
+                                      ? '#334155'
+                                      : '#94a3b8',
+                                    letterSpacing: '-0.01em',
+                                  }}
+                                >
+                                  {etapa.label}
+                                </Typography>
+                              </Box>
+                            )
+                          })}
+                        </Box>
+                      </Box>
+                    </Box>
+                  </Grid>
+
+                  {/* SECCIÓN 3: Compromiso y Botón de Acción Directo (Derecha) */}
+                  <Grid size={{ xs: 12, md: 2.8 }}>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: { xs: 'flex-start', md: 'flex-end' },
+                        gap: 1.2,
+                      }}
+                    >
+                      {/* Fecha de Compromiso + Badge Semántico */}
+                      <Stack direction="row" spacing={0.8} sx={{ alignItems: 'center' }}>
+                        <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.78rem' }}>
+                          Compromiso{' '}
+                          <strong style={{ color: '#0f172a' }}>
+                            {formatearFecha(orden.fecha_compromiso)}
+                          </strong>
+                        </Typography>
+
+                        {compromisoInfo.texto && orden.estado_actual !== 'ENTREGADO' && (
+                          <Box
+                            component="span"
+                            sx={{
+                              borderRadius: 50,
+                              px: 1,
+                              py: 0.2,
+                              fontSize: '0.68rem',
+                              fontWeight: 700,
+                              whiteSpace: 'nowrap',
+                              backgroundColor:
+                                compromisoInfo.nivel === 'vencida' || compromisoInfo.nivel === 'hoy'
+                                  ? '#fef2f2'
+                                  : compromisoInfo.nivel === 'urgente' || compromisoInfo.nivel === 'semana'
+                                  ? '#fef3c7'
+                                  : '#f1f5f9',
+                              color:
+                                compromisoInfo.nivel === 'vencida' || compromisoInfo.nivel === 'hoy'
+                                  ? '#dc2626'
+                                  : compromisoInfo.nivel === 'urgente' || compromisoInfo.nivel === 'semana'
+                                  ? '#b45309'
+                                  : '#475569',
+                              border: `1px solid ${
+                                compromisoInfo.nivel === 'vencida' || compromisoInfo.nivel === 'hoy'
+                                  ? '#fecaca'
+                                  : compromisoInfo.nivel === 'urgente' || compromisoInfo.nivel === 'semana'
+                                  ? '#fde68a'
+                                  : '#e2e8f0'
+                              }`,
+                            }}
+                          >
+                            {compromisoInfo.texto}
+                          </Box>
+                        )}
+                      </Stack>
+
+                      {/* Botón de Acción de Avance de Estación */}
+                      {action.esFinal ? (
+                        <Box
+                          sx={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 0.6,
+                            color: '#047857',
+                            fontWeight: 800,
+                            fontSize: '0.88rem',
+                            py: 0.7,
+                          }}
+                        >
+                          <CheckCircle2 size={18} /> {action.label}
+                        </Box>
+                      ) : (
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => handleAvanzarEstado(orden)}
+                          sx={{
+                            borderRadius: 50,
+                            textTransform: 'none',
+                            fontWeight: 700,
+                            fontSize: '0.825rem',
+                            px: 2.2,
+                            py: 0.7,
+                            color: action.color,
+                            borderColor: action.border,
+                            backgroundColor: '#ffffff',
+                            width: { xs: '100%', sm: 'auto' },
+                            '&:hover': {
+                              backgroundColor: action.bgHover,
+                              borderColor: action.border,
+                            },
+                          }}
+                        >
+                          {action.label}
+                        </Button>
+                      )}
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Paper>
+            )
+          })}
+        </Stack>
       )}
 
-      {/* Modal de Cierre Técnico de Producción y Mermas (Basado en ModalCierreMermas.jsx) */}
-      {ordenParaCierre && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#17233b]/70 p-4 backdrop-blur-sm" role="presentation">
-          <form
-            onSubmit={handleConfirmarCierre}
-            className="max-h-[calc(100vh-2rem)] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl"
+      {/* MODAL DIALOG OFICIAL UAGRM: CIERRE TÉCNICO DE PRODUCCIÓN Y MERMAS */}
+      <Dialog
+        open={Boolean(ordenParaCierre)}
+        onClose={() => !guardandoCierre && setOrdenParaCierre(null)}
+        maxWidth="md"
+        fullWidth
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: 3.5,
+              p: 1,
+              maxHeight: '90vh',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+            },
+          },
+        }}
+      >
+        <DialogTitle sx={{ pb: 1, pt: 2.5, px: 3, position: 'relative', textAlign: 'center' }}>
+          <Typography variant="h5" sx={{ fontWeight: 800, color: '#1e2b4d', fontSize: '1.5rem', mb: 0.5 }}>
+            Cierre Técnico y Reporte de Mermas
+          </Typography>
+          <Typography variant="body2" sx={{ fontWeight: 600, color: '#64748b', fontSize: '0.875rem' }}>
+            Taller de Producción Litográfica
+          </Typography>
+          <IconButton
+            onClick={() => setOrdenParaCierre(null)}
+            disabled={guardandoCierre}
+            size="small"
+            sx={{ position: 'absolute', right: 16, top: 16, color: '#94a3b8', '&:hover': { color: '#475569' } }}
           >
-            <header className="sticky top-0 z-10 flex items-start justify-between gap-4 bg-[#1f2d49] px-6 py-5 text-white">
-              <div className="flex gap-3">
-                <div className="rounded-xl bg-emerald-400/15 p-2 text-emerald-300">
-                  <CheckCircle2 size={24} />
-                </div>
-                <div>
-                  <h2 className="text-lg font-extrabold">Cierre Técnico de Producción</h2>
-                  <p className="mt-0.5 text-xs text-slate-300">
-                    {ordenParaCierre.codigo_ot} ? {ordenParaCierre.proforma?.detalles?.[0]?.descripcion_trabajo || 'Trabajo'}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setOrdenParaCierre(null)}
-                className="rounded-lg p-1 text-slate-400 transition hover:bg-white/10 hover:text-white"
-                aria-label="Cerrar modal"
-              >
-                <X size={20} />
-              </button>
-            </header>
+            <X size={18} />
+          </IconButton>
+        </DialogTitle>
 
-            <div className="space-y-6 p-6">
-              <div className="flex gap-3 rounded-xl border border-sky-200 bg-sky-50 p-3.5 text-xs leading-5 text-sky-900">
-                <Info className="mt-0.5 shrink-0 text-sky-600" size={18} />
-                <p>
-                  Registra el consumo real y las mermas generadas. Los datos se descontarán automáticamente del inventario y alimentarán el dataset de predicción de Machine Learning.
-                </p>
-              </div>
+        {ordenParaCierre && (
+          <form onSubmit={handleConfirmarCierre}>
+            <DialogContent sx={{ px: 2.5, py: 1.5 }}>
+              <Typography variant="body2" sx={{ color: '#64748b', mb: 2, fontSize: '0.85rem' }}>
+                Registra el consumo real y las mermas generadas para {ordenParaCierre.codigo_ot}. Los datos descontarán automáticamente el inventario de almacén y alimentarán el dataset de inferencia ML.
+              </Typography>
 
-              {/* Insumo Principal a Deducir */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
-                  Insumo de Sustrato Principal *
-                </label>
-                <select
-                  required
-                  value={insumoId}
-                  onChange={(e) => setInsumoId(Number(e.target.value))}
-                  className="form-input text-sm font-semibold"
-                >
-                  {insumos.map((i) => (
-                    <option key={i.id_insumo} value={i.id_insumo}>
-                      {i.codigo} - {i.descripcion} (Stock: {i.stock_actual} {i.unidad_medida})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Box sx={{ p: 2, mb: 2.5, borderRadius: 2.5, border: `1px solid ${UAGRM_COLORS.border}`, backgroundColor: '#f8fafc' }}>
+                <Typography variant="body2" sx={{ fontWeight: 800, color: UAGRM_COLORS.blue.dark }}>
+                  {ordenParaCierre.codigo_ot} — {ordenParaCierre.proforma?.detalles?.[0]?.descripcion_trabajo || 'Trabajo Litográfico'}
+                </Typography>
+              </Box>
 
-              {/* Sección de Sustrato / Pliegos */}
-              <section>
-                <div className="mb-3 flex items-center gap-2 border-b border-slate-100 pb-2">
-                  <Layers size={16} className="text-[#800000]" />
-                  <div>
-                    <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800">Sustrato (Papel / Cartulina)</h3>
-                    <p className="text-[11px] text-slate-500">Consumo y calibración en pliegos</p>
-                  </div>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 mb-1">Útil (Ejemplares OK)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={papelUtilizado}
-                      onChange={(e) => setPapelUtilizado(e.target.value)}
-                      className="form-input text-right font-mono font-bold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-orange-700 mb-1 flex items-center gap-1">
-                      <AlertOctagon size={13} /> Merma (Calibración)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={papelMerma}
-                      onChange={(e) => setPapelMerma(e.target.value)}
-                      className="form-input text-right font-mono font-bold border-orange-300 bg-orange-50 text-orange-800"
-                    />
-                  </div>
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 flex flex-col justify-between">
-                    <span className="text-[10px] font-bold uppercase text-slate-500">Total a Deducir</span>
-                    <strong className="text-right font-mono text-lg text-[#800000]">{totalesModal.papelTotal} pliegos</strong>
-                  </div>
-                </div>
-              </section>
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12 }}>
+                  <TextField
+                    fullWidth
+                    select
+                    required
+                    size="small"
+                    label="Insumo de Sustrato Principal *"
+                    value={insumoId}
+                    onChange={(e) => setInsumoId(Number(e.target.value))}
+                  >
+                    {insumos.map((i) => (
+                      <MenuItem key={i.id_insumo} value={i.id_insumo}>
+                        {i.codigo} - {i.descripcion} (Stock: {i.stock_actual} {i.unidad_medida})
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
 
-              {/* Tinta y Planchas */}
-              <div className="grid gap-4 sm:grid-cols-2">
-                <section>
-                  <div className="mb-3 flex items-center gap-2 border-b border-slate-100 pb-2">
-                    <Droplet size={16} className="text-[#2f8298]" />
-                    <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800">Tinta CMYK (kg)</h3>
-                  </div>
-                  <input
+                <Grid size={{ xs: 12, sm: 4 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
                     type="number"
-                    step="0.1"
-                    min="0"
+                    label="Pliegos Útiles (Ejemplares OK)"
+                    value={papelUtilizado}
+                    onChange={(e) => setPapelUtilizado(e.target.value)}
+                    slotProps={{ htmlInput: { min: 0 } }}
+                  />
+                </Grid>
+
+                <Grid size={{ xs: 12, sm: 4 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    type="number"
+                    label="Merma de Calibración"
+                    value={papelMerma}
+                    onChange={(e) => setPapelMerma(e.target.value)}
+                    slotProps={{ htmlInput: { min: 0 } }}
+                  />
+                </Grid>
+
+                <Grid size={{ xs: 12, sm: 4 }}>
+                  <Box sx={{ p: 1.5, borderRadius: 2, border: `1px solid ${UAGRM_COLORS.border}`, backgroundColor: '#f8fafc', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
+                      Total a Deducir
+                    </Typography>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#1e2b4d', fontFamily: 'monospace' }}>
+                      {totalesModal.papelTotal} pliegos
+                    </Typography>
+                  </Box>
+                </Grid>
+
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    type="number"
+                    label="Tinta CMYK Utilizada (kg)"
                     value={tintaUtilizada}
                     onChange={(e) => setTintaUtilizada(e.target.value)}
-                    className="form-input text-right font-mono font-bold"
+                    slotProps={{ htmlInput: { min: 0, step: '0.1' } }}
                   />
-                </section>
+                </Grid>
 
-                <section>
-                  <div className="mb-3 flex items-center gap-2 border-b border-slate-100 pb-2">
-                    <Archive size={16} className="text-slate-500" />
-                    <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800">Planchas CTP (Juegos)</h3>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <TextField
+                      fullWidth
+                      size="small"
                       type="number"
-                      min="0"
+                      label="Planchas OK"
                       value={planchasUtilizadas}
                       onChange={(e) => setPlanchasUtilizadas(e.target.value)}
-                      className="form-input text-right font-mono font-bold"
-                      placeholder="OK"
+                      slotProps={{ htmlInput: { min: 0 } }}
                     />
-                    <input
+                    <TextField
+                      fullWidth
+                      size="small"
                       type="number"
-                      min="0"
+                      label="Planchas Merma"
                       value={planchasMerma}
                       onChange={(e) => setPlanchasMerma(e.target.value)}
-                      className="form-input text-right font-mono font-bold border-orange-300 bg-orange-50 text-orange-800"
-                      placeholder="Merma"
+                      slotProps={{ htmlInput: { min: 0 } }}
                     />
-                  </div>
-                </section>
-              </div>
+                  </Box>
+                </Grid>
 
-              {/* Observaciones Técnicas */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                  Observaciones Técnicas <span className="text-slate-400 font-normal">(Opcional)</span>
-                </label>
-                <textarea
-                  rows={2}
-                  value={observacionesCierre}
-                  onChange={(e) => setObservacionesCierre(e.target.value)}
-                  placeholder="Ej. Merma de 15 pliegos por ajuste de registro en pinzas y secado rápido..."
-                  className="form-input text-sm resize-none"
-                />
-              </div>
-            </div>
+                <Grid size={{ xs: 12 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    multiline
+                    rows={2}
+                    label="Observaciones Técnicas de Producción"
+                    placeholder="Ej. Merma por ajuste de registro en pinzas y secado rápido..."
+                    value={observacionesCierre}
+                    onChange={(e) => setObservacionesCierre(e.target.value)}
+                  />
+                </Grid>
+              </Grid>
+            </DialogContent>
 
-            <footer className="flex justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-              <button
-                type="button"
+            <DialogActions sx={{ p: 2.5, pt: 2, borderTop: `1px solid ${UAGRM_COLORS.border}`, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2.5 }}>
+              <Button
                 onClick={() => setOrdenParaCierre(null)}
-                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 transition"
+                disabled={guardandoCierre}
+                sx={{
+                  backgroundColor: '#607285',
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  px: 3.5,
+                  py: 1.1,
+                  borderRadius: 50,
+                  textTransform: 'none',
+                  fontSize: '0.875rem',
+                  minWidth: 125,
+                  '&:hover': {
+                    backgroundColor: '#4f5e6d',
+                  },
+                }}
               >
                 Cancelar
-              </button>
-              <button
+              </Button>
+
+              <Button
                 type="submit"
+                variant="contained"
                 disabled={guardandoCierre}
-                className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2 text-xs font-bold text-white shadow hover:bg-emerald-700 transition"
+                endIcon={guardandoCierre ? <CircularProgress size={16} color="inherit" /> : <Check size={18} />}
+                sx={{
+                  backgroundColor: '#1e2b4d',
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  px: 3.5,
+                  py: 1.1,
+                  borderRadius: 50,
+                  textTransform: 'none',
+                  fontSize: '0.875rem',
+                  minWidth: 185,
+                  boxShadow: '0 2px 8px rgba(30, 43, 77, 0.25)',
+                  '&:hover': {
+                    backgroundColor: '#141d34',
+                  },
+                }}
               >
-                {guardandoCierre ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-                Confirmar Consumo y Finalizar OT
-              </button>
-            </footer>
+                {guardandoCierre ? 'Confirmando...' : 'Confirmar'}
+              </Button>
+            </DialogActions>
           </form>
-        </div>
-      )}
-    </div>
+        )}
+      </Dialog>
+    </Box>
   )
 }

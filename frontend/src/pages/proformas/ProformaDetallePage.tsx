@@ -5,6 +5,7 @@ import { proformasApi } from '@/api/proformas.api'
 import type { ProformaResponse } from '@/types'
 import { formatearMoneda, formatearFecha } from '@/utils/formatters'
 import { COLORES_ESTADO_PROFORMA } from '@/utils/constants'
+import { imprimirDocumentoHtml } from '@/utils/impresion'
 
 export function ProformaDetallePage() {
   const { id } = useParams<{ id: string }>()
@@ -28,13 +29,7 @@ export function ProformaDetallePage() {
   async function handleImprimir() {
     if (!id) return
     const html = await proformasApi.obtenerImpresionHtml(Number(id))
-    const ventana = window.open('', '_blank')
-    if (ventana) {
-      ventana.document.write(html)
-      ventana.document.close()
-      ventana.focus()
-      ventana.print()
-    }
+    imprimirDocumentoHtml(html)
   }
 
   if (cargando) {
@@ -48,7 +43,7 @@ export function ProformaDetallePage() {
   if (!proforma) {
     return (
       <div className="p-8 text-center text-slate-500">
-        <p>No se encontró la proforma solicitada.</p>
+        <p>No se encontrï¿½ la proforma solicitada.</p>
         <Link to="/proformas" className="text-[#800000] font-bold mt-2 inline-block">Volver a proformas</Link>
       </div>
     )
@@ -78,7 +73,7 @@ export function ProformaDetallePage() {
 
         <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded-xl border border-slate-100">
           <div>
-            <span className="text-slate-400 block">Fecha de Emisión:</span>
+            <span className="text-slate-400 block">Fecha de Emisiï¿½n:</span>
             <strong className="text-slate-800">{formatearFecha(proforma.fecha_emision)}</strong>
           </div>
           <div>
@@ -99,7 +94,7 @@ export function ProformaDetallePage() {
           <button
             type="button"
             onClick={handleImprimir}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#800000] text-white font-bold text-xs shadow hover:bg-[#670000] transition"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#1e2b4d] text-white font-bold text-xs shadow hover:bg-[#141d34] transition"
           >
             <Printer size={16} /> Imprimir Formato Oficial UAGRM
           </button>

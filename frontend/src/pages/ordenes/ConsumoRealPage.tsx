@@ -2,7 +2,7 @@
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   ArrowLeft,
-  CheckCircle2,
+  Check,
   AlertCircle,
   Info,
   Loader2,
@@ -176,23 +176,22 @@ export function ConsumoRealPage() {
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={guardando}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#800000] py-3 px-4 font-bold text-white shadow hover:bg-[#670000] transition disabled:opacity-60 cursor-pointer"
-          >
-            {guardando ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                <span>Registrando Consumo...</span>
-              </>
-            ) : (
-              <>
-                <CheckCircle2 size={16} />
-                <span>Guardar Consumo Real</span>
-              </>
-            )}
-          </button>
+          <div className="flex items-center justify-center gap-3 pt-3">
+            <Link
+              to="/ordenes"
+              className="flex items-center justify-center rounded-full bg-[#607285] px-6 py-2.5 text-sm font-bold text-white shadow hover:bg-[#4f5e6d] transition min-w-[125px]"
+            >
+              Cancelar
+            </Link>
+            <button
+              type="submit"
+              disabled={guardando}
+              className="flex items-center justify-center gap-2 rounded-full bg-[#1e2b4d] px-6 py-2.5 text-sm font-bold text-white shadow hover:bg-[#141d34] transition disabled:opacity-60 cursor-pointer min-w-[165px]"
+            >
+              {guardando ? <Loader2 size={16} className="animate-spin" /> : <Check size={18} />}
+              <span>Confirmar</span>
+            </button>
+          </div>
         </form>
       </div>
     </div>

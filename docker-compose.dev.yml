@@ -17,8 +17,8 @@ services:
   # ---------------------------------------------------------------------------
   db:
     ports:
-      # Puerto expuesto para conectar desde DBeaver, pgAdmin u otros clientes
-      - "5432:5432"
+      # Puerto 5433 expuesto en el host para evitar conflicto con PostgreSQL local (5432)
+      - "5433:5432"
 
   # ---------------------------------------------------------------------------
   # Override de Backend — hot reload con uvicorn
@@ -35,7 +35,13 @@ services:
   # Override de Frontend — servidor de desarrollo de Vite
   # ---------------------------------------------------------------------------
   frontend:
+    build:
+      context: ./frontend
+      target: builder
     command: npm run dev -- --host 0.0.0.0
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
     volumes:
       # Monta el código fuente para hot module replacement (HMR)
       - ./frontend:/app
@@ -44,3 +50,4 @@ services:
     ports:
       # Puerto estándar del servidor de desarrollo de Vite
       - "5173:5173"
+      
