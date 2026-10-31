@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   BrainCircuit,
   TrendingUp,
@@ -27,7 +27,7 @@ import {
 import { prediccionesApi } from '@/api/predicciones.api'
 import { insumosApi } from '@/api/insumos.api'
 import { useAlertas } from '@/hooks/useAlertas'
-import type { InsumoResponse, PrediccionDemandaResponse, EntrenamientoResponse } from '@/types'
+import type { InsumoResponse, PrediccionDemandaResponse, EntrenamientoResponse, PeriodoAcademicoResponse } from '@/types'
 
 // Datos de proyección para Recharts
 const DATOS_GRAFICA_DEMANDA = [
@@ -44,8 +44,9 @@ export function PrediccionesPage() {
 
   const [insumos, setInsumos] = useState<InsumoResponse[]>([])
   const [insumoSeleccionado, setInsumoSeleccionado] = useState<number | ''>('')
+  const [periodos, setPeriodos] = useState<PeriodoAcademicoResponse[]>([])
   const [periodo, setPeriodo] = useState<number>(1)
-  const [periodoNombre, setPeriodoNombre] = useState<string>('Semestre I - 2027 (Proyección)')
+  const [periodoNombre, setPeriodoNombre] = useState<string>('Semestre I - 2026')
 
   // Estados de Machine Learning
   const [prediccionActual, setPrediccionActual] = useState<PrediccionDemandaResponse | null>(null)
@@ -55,20 +56,31 @@ export function PrediccionesPage() {
   const [mensajeExito, setMensajeExito] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  // Cargar catálogo de insumos
+  // Cargar catálogo de insumos y periodos académicos dinámicos
   useEffect(() => {
-    async function cargarInsumos() {
+    async function cargarDatosIniciales() {
       try {
-        const res = await insumosApi.listar({ por_pagina: 100 })
-        setInsumos(res.datos || [])
-        if (res.datos?.length > 0) {
-          setInsumoSeleccionado(res.datos[0].id_insumo)
+        const [resInsumos, resPeriodos] = await Promise.all([
+          insumosApi.listar({ por_pagina: 100 }),
+          prediccionesApi.listarPeriodos(),
+        ])
+        const listaInsumos = resInsumos.datos || []
+        setInsumos(listaInsumos)
+        if (listaInsumos.length > 0) {
+          setInsumoSeleccionado(listaInsumos[0].id_insumo)
+        }
+
+        const listaPeriodos = resPeriodos || []
+        setPeriodos(listaPeriodos)
+        if (listaPeriodos.length > 0) {
+          setPeriodo(listaPeriodos[0].id_periodo)
+          setPeriodoNombre(`Semestre ${listaPeriodos[0].semestre} (Gestión ${listaPeriodos[0].gestion})`)
         }
       } catch {
-        setError('Error al sincronizar catálogo de insumos para el modelo predictivo.')
+        setError('Error al sincronizar catálogo de insumos y periodos para el modelo predictivo.')
       }
     }
-    cargarInsumos()
+    cargarDatosIniciales()
   }, [])
 
   // Estimar Demanda usando el endpoint de inferencia
@@ -200,7 +212,7 @@ export function PrediccionesPage() {
               <p className="mt-1 text-2xl font-extrabold text-slate-800">
                 {entrenamientoInfo?.r2_score
                   ? `${(Number(entrenamientoInfo.r2_score) * 100).toFixed(1)}%`
-                  : '94.2%'}
+                  : '82.7%'}
               </p>
             </div>
             <div className="rounded-xl bg-emerald-50 p-2.5 text-emerald-700">
@@ -218,7 +230,7 @@ export function PrediccionesPage() {
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Dataset Histórico</p>
               <p className="mt-1 text-2xl font-extrabold text-slate-800">
-                {entrenamientoInfo?.registros_entrenamiento || '1,450'}{' '}
+                {entrenamientoInfo?.registros_entrenamiento || '2,055'}{' '}
                 <span className="text-sm font-medium text-slate-500">registros</span>
               </p>
             </div>
@@ -266,12 +278,25 @@ export function PrediccionesPage() {
               onChange={(e) => {
                 const val = Number(e.target.value)
                 setPeriodo(val)
-                setPeriodoNombre(val === 1 ? 'Semestre I - 2027 (Proyección)' : 'Semestre II - 2027 (Proyección)')
+                const pObj = periodos.find((p) => p.id_periodo === val)
+                if (pObj) {
+                  setPeriodoNombre(`Semestre ${pObj.semestre} (Gestión ${pObj.gestion})`)
+                }
               }}
               className="form-input text-sm font-semibold"
             >
-              <option value={1}>Semestre I - 2027 (Proyección)</option>
-              <option value={2}>Semestre II - 2027 (Proyección)</option>
+              {periodos.length > 0 ? (
+                periodos.map((p) => (
+                  <option key={p.id_periodo} value={p.id_periodo}>
+                    Semestre {p.semestre} (Gestión {p.gestion}) {p.es_pico_demanda ? '★ Pico' : ''}
+                  </option>
+                ))
+              ) : (
+                <>
+                  <option value={1}>Semestre I - 2026</option>
+                  <option value={2}>Semestre II - 2026</option>
+                </>
+              )}
             </select>
           </div>
 

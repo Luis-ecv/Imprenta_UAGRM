@@ -1,7 +1,7 @@
 # CONTRATO DE INTEGRACIÓN Y RESUMEN DE CAMBIOS DEL BACKEND PARA EL FRONTEND
 ## Software Integral de Gestión y Predicción de Insumos — Imprenta Universitaria UAGRM
 
-> **Documento Oficial de Referencia para el Frontend:** Este archivo contiene el catálogo operativo completo de los **34 endpoints RESTful**, los esquemas JSON de entrada/salida (request/response), las reglas de negocio de la tesis y la guía de adaptación requerida en la SPA (React + TypeScript).
+> **Documento Oficial de Referencia para el Frontend:** Este archivo contiene el catálogo operativo completo de los **38 endpoints RESTful**, los esquemas JSON de entrada/salida (request/response), las reglas de negocio de la tesis y la guía de adaptación requerida en la SPA (React + TypeScript).
 
 ---
 
@@ -55,11 +55,11 @@ La base de datos ya cuenta con 5 cuentas activas creadas con contraseñas segura
 
 | Rol | Correo Electrónico | Contraseña | Nombre Completo |
 | :--- | :--- | :--- | :--- |
-| **Superadministrador** | `superadmin@uagrm.edu.bo` | `Uagrm2026*` | Ing. Director de Tecnología |
-| **Administrador** | `admin@uagrm.edu.bo` | `Uagrm2026*` | Lic. Jefe Administrativo Imprenta |
+| **Superadministrador** | `superadministrador@uagrm.edu.bo` | `Uagrm2026*` | Ing. Director de Tecnología |
+| **Administrador** | `administrador@uagrm.edu.bo` | `Uagrm2026*` | Lic. Jefe Administrativo Imprenta |
 | **Operador Mostrador** | `mostrador@uagrm.edu.bo` | `Uagrm2026*` | Auxiliar de Atención Mostrador |
 | **Operador Taller** | `taller@uagrm.edu.bo` | `Uagrm2026*` | Jefe de Taller y Prensa |
-| **Cliente** | `cliente@uagrm.edu.bo` | `Uagrm2026*` | Solicitante Facultad FCET |
+| **Cliente** | `delegado.ficct@uagrm.edu.bo` | `Uagrm2026*` | Solicitante Facultad FCET |
 
 ---
 
@@ -90,7 +90,7 @@ La base de datos ya cuenta con 5 cuentas activas creadas con contraseñas segura
 
 ---
 
-## 4. CATÁLOGO COMPLETO DE LOS 34 ENDPOINTS RESTFUL
+## 4. CATÁLOGO COMPLETO DE LOS 38 ENDPOINTS RESTFUL
 
 ### Módulo 1: Autenticación y Perfil (`/api/v1/auth`)
 
@@ -99,7 +99,7 @@ La base de datos ya cuenta con 5 cuentas activas creadas con contraseñas segura
 - **Request Body:**
   ```json
   {
-    "email": "admin@uagrm.edu.bo",
+    "email": "administrador@uagrm.edu.bo",
     "password": "Uagrm2026*"
   }
   ```
@@ -120,7 +120,7 @@ La base de datos ya cuenta con 5 cuentas activas creadas con contraseñas segura
   ```json
   {
     "id_usuario": 1,
-    "email": "admin@uagrm.edu.bo",
+    "email": "administrador@uagrm.edu.bo",
     "nombre_completo": "Lic. Jefe Administrativo Imprenta",
     "rol": "Administrador"
   }
@@ -144,13 +144,28 @@ La base de datos ya cuenta con 5 cuentas activas creadas con contraseñas segura
         "id_usuario": 1,
         "rol_id": 2,
         "nombre_completo": "Lic. Jefe Administrativo Imprenta",
-        "email": "admin@uagrm.edu.bo",
+        "email": "administrador@uagrm.edu.bo",
         "activo": true,
         "ultimo_acceso": "2026-10-16T19:30:00Z",
         "rol": { "id_rol": 2, "nombre": "Administrador", "descripcion": "..." }
       }
     ]
   }
+  ```
+
+#### 3.1 Listar Roles Disponibles (Selector Dinámico)
+- **Método y Ruta:** `GET /api/v1/usuarios/roles`
+- **Permisos:** Superadministrador, Administrador.
+- **Propósito Frontend:** Desplegar el selector de roles en la creación/edición de usuario (cero hardcodeo).
+- **Response (200 OK):**
+  ```json
+  [
+    { "id_rol": 1, "nombre": "Superadministrador", "descripcion": "Acceso total y auditoría" },
+    { "id_rol": 2, "nombre": "Administrador", "descripcion": "Gestión operativa e inventario" },
+    { "id_rol": 3, "nombre": "Operador Mostrador", "descripcion": "Atención y cotizaciones" },
+    { "id_rol": 4, "nombre": "Operador Taller", "descripcion": "Producción y control de merma" },
+    { "id_rol": 5, "nombre": "Cliente", "descripcion": "Portal de autoservicio" }
+  ]
   ```
 
 #### 4. Crear Usuario
@@ -253,6 +268,32 @@ La base de datos ya cuenta con 5 cuentas activas creadas con contraseñas segura
   }
   ```
 
+#### 10.1 Listar Categorías de Insumos (Selector Dinámico)
+- **Método y Ruta:** `GET /api/v1/insumos/categorias`
+- **Permisos:** Todos los usuarios autenticados.
+- **Propósito Frontend:** Poblar selector desplegable de categoría en registro/edición y filtro de insumos (cero hardcodeo).
+- **Response (200 OK):**
+  ```json
+  [
+    { "id_categoria": 1, "nombre": "Papeles", "unidad_base": "RESMA" },
+    { "id_categoria": 2, "nombre": "Tintas y Químicos", "unidad_base": "KILO" },
+    { "id_categoria": 3, "nombre": "Planchas y Películas", "unidad_base": "UNIDAD" },
+    { "id_categoria": 4, "nombre": "Materiales de Encuadernación", "unidad_base": "UNIDAD" }
+  ]
+  ```
+
+#### 10.2 Crear Categoría de Insumo
+- **Método y Ruta:** `POST /api/v1/insumos/categorias`
+- **Permisos:** Superadministrador, Administrador.
+- **Request Body:**
+  ```json
+  {
+    "nombre": "Barnices y Acabados",
+    "unidad_base": "LITRO"
+  }
+  ```
+- **Response (201 Created):** Objeto `CategoriaInsumoResponse`.
+
 #### 11. Crear Insumo
 - **Método y Ruta:** `POST /api/v1/insumos`
 - **Request Body:**
@@ -320,7 +361,8 @@ La base de datos ya cuenta con 5 cuentas activas creadas con contraseñas segura
 - **Response (201 Created):** Objeto `TarifaResponse`.
 
 #### 16. Listar Tipos de Trabajo
-- **Método y Ruta:** `GET /api/v1/tipos-trabajo`
+- **Método y Ruta:** `GET /api/v1/tipos-trabajo` (Alias soportado: `GET /api/v1/tarifas/tipos-trabajo`)
+- **Propósito Frontend:** Desplegable de tipos de trabajo al agregar ítems en el cotizador de proformas (cero hardcodeo).
 - **Response (200 OK):**
   ```json
   [
@@ -462,7 +504,7 @@ La base de datos ya cuenta con 5 cuentas activas creadas con contraseñas segura
 #### 25. Avanzar Estado de Producción (Transición Estricta)
 - **Método y Ruta:** `PATCH /api/v1/ordenes/{id_orden}/estado`
 - **Flujo Estricto de Estados en Taller:**
-  $$	ext{REGISTRADO} \longrightarrow 	ext{EN COLA} \longrightarrow 	ext{EN IMPRESION} \longrightarrow 	ext{EN ACABADO} \longrightarrow 	ext{FINALIZADO} \longrightarrow 	ext{ENTREGADO}$$
+  $$\text{REGISTRADO} \longrightarrow \text{EN COLA} \longrightarrow \text{EN IMPRESION} \longrightarrow \text{EN ACABADO} \longrightarrow \text{FINALIZADO} \longrightarrow \text{ENTREGADO}$$
 - **Request Body:**
   ```json
   {
@@ -491,8 +533,32 @@ La base de datos ya cuenta con 5 cuentas activas creadas con contraseñas segura
 
 ### Módulo 8: Compras y Machine Learning (`/api/v1/predicciones`, `/api/v1/compras`)
 
-#### 27. Estimar Predicción de Demanda Futura (Random Forest)
-- **Método y Ruta:** `POST /api/v1/predicciones/estimar`
+#### 26.1 Listar Periodos Académicos (Selector Dinámico ML)
+- **Método y Ruta:** `GET /api/v1/predicciones/periodos`
+- **Permisos:** Superadministrador, Administrador.
+- **Propósito Frontend:** Poblar el selector de periodos académicos/semestres para inferencia de Machine Learning (cero hardcodeo).
+- **Response (200 OK):**
+  ```json
+  [
+    {
+      "id_periodo": 1,
+      "gestion": 2026,
+      "semestre": "1-2026",
+      "fecha_inicio": "2026-02-15",
+      "fecha_fin": "2026-06-30",
+      "es_pico_demanda": true
+    }
+  ]
+  ```
+
+#### 26.2 Consultar Historial de Predicciones por Insumo
+- **Método y Ruta:** `GET /api/v1/predicciones/{insumo_id}`
+- **Permisos:** Superadministrador, Administrador.
+- **Response (200 OK):** Lista de objetos `PrediccionDemandaResponse`.
+
+#### 27. Generar Predicción de Demanda Futura (Machine Learning)
+- **Método y Ruta:** `POST /api/v1/predicciones`
+- **Permisos:** Administrador, Superadministrador.
 - **Request Body:**
   ```json
   {
@@ -506,9 +572,10 @@ La base de datos ya cuenta con 5 cuentas activas creadas con contraseñas segura
     "id_prediccion": 1,
     "insumo_id": 1,
     "periodo_id": 1,
-    "cantidad_estimada": 145.80,
-    "unidad_medida": "RESMA",
-    "fecha_prediccion": "2026-10-16T21:20:00Z",
+    "cantidad_proyectada": 145.80,
+    "margen_variabilidad": 14.58,
+    "stock_sugerido_compra": 25.80,
+    "fecha_generacion": "2026-10-16T21:20:00Z",
     "es_referencial": false
   }
   ```
@@ -516,6 +583,7 @@ La base de datos ya cuenta con 5 cuentas activas creadas con contraseñas segura
 
 #### 28. Re-entrenar Modelo de Machine Learning
 - **Método y Ruta:** `POST /api/v1/predicciones/entrenar`
+- **Permisos:** Administrador, Superadministrador.
 - **Response (200 OK):**
   ```json
   {
@@ -577,6 +645,11 @@ Al iniciar la sesión del Frontend, asegúrate de verificar o implementar los si
 - [ ] **Interceptor de Axios (`src/api/client.ts`):** Confirmar que use `VITE_API_BASE_URL` y que en caso de error `401 Unauthorized` limpie el token y redirija a `/login`.
 - [ ] **Pantalla de Login (`src/pages/Login.tsx`):** Enviar `{ email, password }` a `POST /auth/login`, capturar `access_token` y cargar perfil con `/auth/me`.
 - [ ] **Control de Rutas Protegidas (`src/components/ProtectedRoute.tsx`):** Ocultar rutas de Taller para clientes y mostrador; ocultar Proformas y Usuarios para el Operador de Taller.
+- [ ] **Selectores Dinámicos (Regla Cero Hardcodeo):**
+  - Consumir `GET /api/v1/usuarios/roles` para poblar el selector de roles al crear/editar usuarios.
+  - Consumir `GET /api/v1/insumos/categorias` para el selector de categoría en insumos y filtros.
+  - Consumir `GET /api/v1/predicciones/periodos` para el selector de periodos académicos en Machine Learning.
+  - Consumir `GET /api/v1/tipos-trabajo` para el selector de tipo de trabajo gráfico en el detalle de proformas.
 - [ ] **Formulario de Proformas (`src/pages/Proformas/NuevaProforma.tsx`):**
   - Selector de modalidad: `insumos_imprenta` vs `insumos_cliente`.
   - Si el usuario selecciona `insumos_cliente`, el campo **Costo Papel** debe deshabilitarse o fijarse en `0.00`.
@@ -588,7 +661,7 @@ Al iniciar la sesión del Frontend, asegúrate de verificar o implementar los si
   - Consumir respuesta paginada desde `response.data.datos`.
   - Resaltar en rojo los insumos donde `stock_actual <= stock_minimo`.
 - [ ] **Panel de Machine Learning (`src/pages/ML/Predicciones.tsx`):**
-  - Gráfica de demanda estimada vs stock actual con indicador visual si la predicción es referencial o generada por el RandomForestRegressor.
+  - Gráfica de demanda proyectada vs stock actual con indicador visual si la predicción es referencial o generada por el RandomForestRegressor.
 
 ---
 *Documento autogenerado para alineación entre capas — Imprenta Universitaria UAGRM 2026.*

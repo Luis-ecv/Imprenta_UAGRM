@@ -6,10 +6,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import ConflictoRegistro, RecursoNoEncontrado
 from app.core.security import hash_password
+from app.models.rol import Rol
 from app.models.usuario import Usuario
 from app.repositories.usuario_repository import UsuarioRepository
 from app.schemas.common import RespuestaPaginada
-from app.schemas.usuario import UsuarioCreate, UsuarioResponse, UsuarioUpdate
+from app.schemas.usuario import RolResponse, UsuarioCreate, UsuarioResponse, UsuarioUpdate
 
 
 async def listar(
@@ -23,6 +24,12 @@ async def listar(
         por_pagina=por_pagina,
         datos=[UsuarioResponse.model_validate(u) for u in usuarios],
     )
+
+
+async def listar_roles(db: AsyncSession) -> list[RolResponse]:
+    result = await db.execute(select(Rol).order_by(Rol.id_rol))
+    roles = result.scalars().all()
+    return [RolResponse.model_validate(r) for r in roles]
 
 
 async def crear(db: AsyncSession, datos: UsuarioCreate) -> UsuarioResponse:

@@ -2,10 +2,13 @@
 Punto de entrada principal de la API REST.
 Software Integral de Gestión y Predicción de Insumos - Imprenta Universitaria UAGRM
 """
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.core.permissions import get_current_user
+from app.database import get_db
 from app.routers import (
     auth,
     usuarios,
@@ -20,6 +23,8 @@ from app.routers import (
     reportes,
     bitacora,
 )
+from app.schemas.tipo_trabajo import TipoTrabajoResponse
+from app.services import tarifa_service
 
 app = FastAPI(
     title="API Imprenta Universitaria UAGRM",
@@ -56,10 +61,25 @@ app.include_router(reportes.router,     prefix=API_PREFIX, tags=["Reportes"])
 app.include_router(bitacora.router,     prefix=API_PREFIX, tags=["Bitácora"])
 
 
+# Alias directo para tipos de trabajo (admite tanto /tipos-trabajo como /tarifas/tipos-trabajo)
+@app.get(
+    f"{API_PREFIX}/tipos-trabajo",
+    response_model=list[TipoTrabajoResponse],
+    tags=["Tarifas"],
+    summary="Listar tipos de trabajo gráfico",
+)
+async def listar_tipos_trabajo_directo(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    return await tarifa_service.listar_tipos_trabajo(db)
+
+
 @app.get("/", tags=["Health"])
 async def root():
     """Health check del servicio — verifica que la API está en línea."""
     return {"status": "ok", "service": "Imprenta UAGRM API", "version": "1.0.0"}
+
 
 if __name__ == "__main__":
     import uvicorn

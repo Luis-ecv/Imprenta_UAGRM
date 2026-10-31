@@ -1,8 +1,9 @@
-﻿import apiClient from './client'
+import apiClient from './client'
 import type {
   InferenciaMLRequest,
   PrediccionDemandaResponse,
-  EntrenamientoResponse
+  EntrenamientoResponse,
+  PeriodoAcademicoResponse,
 } from '@/types'
 
 export const prediccionesApi = {
@@ -12,6 +13,10 @@ export const prediccionesApi = {
   },
   reentrenarModelo: async (): Promise<EntrenamientoResponse> => {
     const { data } = await apiClient.post<EntrenamientoResponse>('/predicciones/entrenar')
+    return data
+  },
+  listarPeriodos: async (): Promise<PeriodoAcademicoResponse[]> => {
+    const { data } = await apiClient.get<PeriodoAcademicoResponse[]>('/predicciones/periodos')
     return data
   },
 }

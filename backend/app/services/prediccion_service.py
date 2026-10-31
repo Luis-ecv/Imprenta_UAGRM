@@ -15,12 +15,22 @@ from app.models.insumo import Insumo
 from app.models.periodo_academico import PeriodoAcademico
 from app.models.prediccion_demanda import PrediccionDemanda
 from app.repositories.prediccion_repository import PrediccionRepository
+from app.schemas.periodo_academico import PeriodoAcademicoResponse
 from app.schemas.prediccion_demanda import (
     EntrenamientoResponse,
     InferenciaMLRequest,
     PrediccionDemandaResponse,
 )
 from app.services import bitacora_service
+
+
+async def listar_periodos(db: AsyncSession) -> list[PeriodoAcademicoResponse]:
+    """Retorna los periodos académicos disponibles para selección en inferencias ML."""
+    result = await db.execute(
+        select(PeriodoAcademico).order_by(PeriodoAcademico.gestion.desc(), PeriodoAcademico.id_periodo.desc())
+    )
+    periodos = result.scalars().all()
+    return [PeriodoAcademicoResponse.model_validate(p) for p in periodos]
 
 
 async def entrenar(db: AsyncSession, usuario_id: int = 1) -> EntrenamientoResponse:
