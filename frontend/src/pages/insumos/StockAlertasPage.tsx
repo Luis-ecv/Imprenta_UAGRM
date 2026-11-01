@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Grid';
-import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import IconButton from '@mui/material/IconButton';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -28,7 +27,6 @@ import {
   RefreshCw,
   Layers,
   CheckCircle2,
-  Check,
   X,
   PackagePlus,
   Sliders,
@@ -36,7 +34,8 @@ import {
 } from 'lucide-react';
 
 import { insumosApi } from '@/api/insumos.api';
-import { UAGRM_COLORS } from '@/theme/uagrmTheme';
+import { Button } from '@/components/ui';
+import { UAGRM_TOKENS } from '@/theme/tokens';
 import type { InsumoResponse, MovimientoInventarioCreate } from '@/types';
 import { formatearMoneda } from '@/utils/formatters';
 
@@ -51,7 +50,7 @@ export function StockAlertasPage() {
   const [modalReabastecerAbierto, setModalReabastecerAbierto] = useState<boolean>(false);
   const [insumoParaReabastecer, setInsumoParaReabastecer] = useState<InsumoResponse | null>(null);
   const [cantidadReabastecer, setCantidadReabastecer] = useState<number>(10);
-  const [referenciaReabastecer, setReferenciaReabastecer] = useState<string>('Reposición por stock crítico de seguridad');
+  const [referenciaReabastecer, setReferenciaReabastecer] = useState<string>('Reposición por stock de seguridad');
   const [guardandoReabastecimiento, setGuardandoReabastecimiento] = useState<boolean>(false);
 
   // Modal 2: Ajuste de parámetros de stock (Popup)
@@ -186,27 +185,8 @@ export function StockAlertasPage() {
   };
 
   return (
-    <Box sx={{ p: { xs: 1.5, sm: 2.5 } }}>
-      {/* 1. Botón de Retorno */}
-      {/* <Box sx={{ mb: 2 }}>
-        <Button
-          component={Link}
-          to="/insumos"
-          startIcon={<ArrowLeft size={16} />}
-          sx={{
-            color: '#0284c7',
-            fontWeight: 700,
-            textTransform: 'none',
-            fontSize: '0.85rem',
-            p: 0,
-            '&:hover': { backgroundColor: 'transparent', color: '#0369a1' },
-          }}
-        >
-          Volver al Catálogo de Insumos
-        </Button>
-      </Box> */}
-
-      {/* 2. Encabezado Oficial con Botones Pill */}
+    <Box sx={{ p: { xs: 2, sm: 3, md: 3.5 }, backgroundColor: UAGRM_TOKENS.background.default, minHeight: '100%' }}>
+      {/* 1. Encabezado */}
       <Box
         sx={{
           display: 'flex',
@@ -214,36 +194,35 @@ export function StockAlertasPage() {
           justifyContent: 'space-between',
           alignItems: { xs: 'flex-start', sm: 'center' },
           gap: 2,
-          mb: 3,
+          mb: 3.5,
         }}
       >
         <Box>
-          {/* <Typography
+          <Typography
             variant="overline"
             sx={{
-              color: '#dc2626',
               fontWeight: 800,
               letterSpacing: '0.12em',
-              fontSize: '0.75rem',
+              color: UAGRM_TOKENS.colors.ruby,
               display: 'block',
-              mb: 0.5,
+              lineHeight: 1.2,
             }}
           >
-            CONTROL DE INVENTARIO CRÍTICO
-          </Typography> */}
+            Control de Inventario Crítico
+          </Typography>
           <Typography
             variant="h4"
             sx={{
-              fontWeight: 800,
-              color: '#1e2b4d',
+              fontWeight: 780,
+              color: UAGRM_TOKENS.colors.primaryDark,
               letterSpacing: '-0.02em',
               mb: 0.5,
             }}
           >
             Alertas de Stock
           </Typography>
-          <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>
-            Materiales litográficos con saldo en depósito por debajo del nivel mínimo de seguridad.
+          <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate }}>
+            Materiales litográficos con saldo en taller por debajo del nivel mínimo de seguridad.
             {horaActual ? ` · Actualizado ${horaActual}` : ''}
           </Typography>
         </Box>
@@ -252,41 +231,20 @@ export function StockAlertasPage() {
           <Button
             onClick={cargarAlertas}
             disabled={cargando}
-            variant="outlined"
-            startIcon={<RefreshCw size={16} className={cargando ? 'animate-spin' : ''} />}
-            sx={{
-              borderRadius: 50,
-              textTransform: 'none',
-              fontWeight: 700,
-              color: '#475569',
-              borderColor: '#e2e8f0',
-              backgroundColor: '#ffffff',
-              px: 2.2,
-              py: 0.9,
-              '&:hover': {
-                borderColor: '#cbd5e1',
-                backgroundColor: '#f8fafc',
-              },
-            }}
+            variant="outline"
+            icon={<RefreshCw size={16} className={cargando ? 'animate-spin' : ''} />}
           >
             Actualizar
           </Button>
 
           {alertas.length > 0 && (
             <Button
-              variant="contained"
-              startIcon={<Package size={17} />}
+              variant="default"
+              icon={<Package size={17} />}
               onClick={handleReabastecerCriticoHeader}
-              sx={{
-                backgroundColor: '#dc2626',
-                color: '#ffffff',
-                fontWeight: 700,
-                borderRadius: 50,
-                px: 2.8,
-                py: 0.9,
-                textTransform: 'none',
+              style={{
+                backgroundColor: UAGRM_TOKENS.colors.ruby,
                 boxShadow: '0 4px 14px rgba(220, 38, 38, 0.25)',
-                '&:hover': { backgroundColor: '#b91c1c' },
               }}
             >
               Reabastecer crítico ({alertas.length})
@@ -302,7 +260,7 @@ export function StockAlertasPage() {
         </Alert>
       )}
 
-      {/* 3. Contenedor de la Tabla o Estado Óptimo */}
+      {/* 2. Contenedor de la Tabla o Estado Óptimo */}
       {cargando ? (
         <Box
           sx={{
@@ -313,11 +271,11 @@ export function StockAlertasPage() {
             gap: 2,
             backgroundColor: '#ffffff',
             borderRadius: 3.5,
-            border: '1px solid #ebe6df',
+            border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
           }}
         >
-          <CircularProgress size={36} sx={{ color: UAGRM_COLORS.blue.main }} />
-          <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 600 }}>
+          <CircularProgress size={36} sx={{ color: UAGRM_TOKENS.colors.royalBlue }} />
+          <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate, fontWeight: 600 }}>
             Consultando niveles de stock en tiempo real...
           </Typography>
         </Box>
@@ -329,7 +287,7 @@ export function StockAlertasPage() {
             px: 3,
             textAlign: 'center',
             borderRadius: 3.5,
-            border: '1px dashed #cbd5e1',
+            border: `1px dashed ${UAGRM_TOKENS.border.focus}`,
             backgroundColor: '#ffffff',
           }}
         >
@@ -339,7 +297,7 @@ export function StockAlertasPage() {
               height: 56,
               borderRadius: '50%',
               backgroundColor: '#ecfdf5',
-              color: '#059669',
+              color: UAGRM_TOKENS.colors.emerald,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -349,27 +307,17 @@ export function StockAlertasPage() {
           >
             <CheckCircle2 size={32} />
           </Box>
-          <Typography variant="h6" sx={{ fontWeight: 800, color: '#1e2b4d', mb: 0.5 }}>
+          <Typography variant="h6" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.primaryDark, mb: 0.5 }}>
             Inventario en Nivel Óptimo
           </Typography>
-          <Typography variant="body2" sx={{ color: '#64748b', maxWidth: 460, mx: 'auto', mb: 3 }}>
+          <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate, maxWidth: 460, mx: 'auto', mb: 3 }}>
             Todos los insumos del taller se encuentran actualmente por encima de su umbral mínimo de seguridad.
           </Typography>
           <Button
             component={Link}
             to="/insumos"
-            variant="outlined"
-            startIcon={<Layers size={16} />}
-            sx={{
-              borderRadius: 50,
-              borderColor: '#e2e8f0',
-              color: '#1e2b4d',
-              fontWeight: 700,
-              textTransform: 'none',
-              px: 3,
-              py: 0.9,
-              '&:hover': { backgroundColor: '#f8fafc', borderColor: '#cbd5e1' },
-            }}
+            variant="outline"
+            icon={<Layers size={16} />}
           >
             Ver Catálogo de Insumos
           </Button>
@@ -381,22 +329,22 @@ export function StockAlertasPage() {
             elevation={0}
             sx={{
               borderRadius: 3.5,
-              border: '1px solid #ebe6df',
+              border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
               backgroundColor: '#ffffff',
               overflow: 'hidden',
               boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
             }}
           >
             <Table sx={{ minWidth: 850 }}>
-              <TableHead sx={{ backgroundColor: '#ffffff' }}>
-                <TableRow sx={{ '& th': { borderBottom: '1px solid #f1ece5', py: 2 } }}>
+              <TableHead sx={{ backgroundColor: '#faf8f5' }}>
+                <TableRow sx={{ '& th': { borderBottom: `1px solid ${UAGRM_TOKENS.border.subtle}`, py: 2 } }}>
                   <TableCell padding="checkbox" sx={{ pl: 2.5 }}>
                     <Checkbox
                       size="small"
                       checked={alertas.length > 0 && seleccionados.length === alertas.length}
                       indeterminate={seleccionados.length > 0 && seleccionados.length < alertas.length}
                       onChange={handleToggleSelectAll}
-                      sx={{ color: '#94a3b8', '&.Mui-checked': { color: '#1e2b4d' } }}
+                      sx={{ color: UAGRM_TOKENS.colors.mutedSlate, '&.Mui-checked': { color: UAGRM_TOKENS.colors.primaryDark } }}
                     />
                   </TableCell>
                   <TableCell sx={{ fontWeight: 800, color: '#475569', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -406,13 +354,13 @@ export function StockAlertasPage() {
                     Nivel
                   </TableCell>
                   <TableCell sx={{ fontWeight: 800, color: '#475569', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em', minWidth: 220 }}>
-                    Stock vs mínimo
+                    Stock vs Mínimo
                   </TableCell>
                   <TableCell sx={{ fontWeight: 800, color: '#475569', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     Déficit
                   </TableCell>
                   <TableCell sx={{ fontWeight: 800, color: '#475569', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Costo reposición
+                    Costo Reposición
                   </TableCell>
                   <TableCell align="right" sx={{ fontWeight: 800, color: '#475569', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em', pr: 3 }}>
                     Acción
@@ -435,7 +383,7 @@ export function StockAlertasPage() {
                       hover
                       sx={{
                         '&:hover': { backgroundColor: '#faf8f5' },
-                        '& td': { borderBottom: '1px solid #f5f2eb', py: 2 },
+                        '& td': { borderBottom: `1px solid ${UAGRM_TOKENS.border.subtle}`, py: 2 },
                         '&:last-child td': { borderBottom: 0 },
                       }}
                     >
@@ -445,7 +393,7 @@ export function StockAlertasPage() {
                           size="small"
                           checked={isChecked}
                           onChange={() => handleToggleSelect(insumo.id_insumo)}
-                          sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#1e2b4d' } }}
+                          sx={{ color: '#cbd5e1', '&.Mui-checked': { color: UAGRM_TOKENS.colors.primaryDark } }}
                         />
                       </TableCell>
 
@@ -456,7 +404,7 @@ export function StockAlertasPage() {
                             variant="subtitle2"
                             sx={{
                               fontWeight: 800,
-                              color: '#1a1a1a',
+                              color: UAGRM_TOKENS.colors.charcoal,
                               fontSize: '0.925rem',
                               lineHeight: 1.25,
                             }}
@@ -466,7 +414,7 @@ export function StockAlertasPage() {
                           <Typography
                             variant="caption"
                             sx={{
-                              color: '#88847e',
+                              color: UAGRM_TOKENS.colors.slate,
                               fontWeight: 700,
                               fontSize: '0.75rem',
                               textTransform: 'uppercase',
@@ -475,7 +423,7 @@ export function StockAlertasPage() {
                               mt: 0.3,
                             }}
                           >
-                            {insumo.categoria?.nombre || 'PAPELES Y CARTULINAS'}
+                            {insumo.categoria?.nombre || 'General'}
                           </Typography>
                         </Box>
                       </TableCell>
@@ -489,8 +437,8 @@ export function StockAlertasPage() {
                             alignItems: 'center',
                             gap: 0.6,
                             backgroundColor: '#fef2f2',
-                            color: '#dc2626',
-                            border: '1px solid #fecaca',
+                            color: UAGRM_TOKENS.colors.ruby,
+                            border: `1px solid ${UAGRM_TOKENS.border.danger}`,
                             borderRadius: 50,
                             px: 1.5,
                             py: 0.4,
@@ -520,19 +468,18 @@ export function StockAlertasPage() {
                               sx={{
                                 width: `${porcentaje}%`,
                                 height: '100%',
-                                backgroundColor: '#b91c1c',
+                                backgroundColor: UAGRM_TOKENS.colors.ruby,
                                 borderRadius: 4,
                                 transition: 'width 0.4s ease',
                               }}
                             />
                           </Box>
 
-                          {/* Subtexto: "5 de 10 Pliego" y "50%" */}
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600, fontSize: '0.78rem' }}>
+                            <Typography variant="caption" sx={{ color: UAGRM_TOKENS.colors.slate, fontWeight: 600, fontSize: '0.78rem' }}>
                               {stockActual} de {stockMinimo} {insumo.unidad_medida}
                             </Typography>
-                            <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 700, fontSize: '0.78rem' }}>
+                            <Typography variant="caption" sx={{ color: UAGRM_TOKENS.colors.slate, fontWeight: 700, fontSize: '0.78rem' }}>
                               {porcentaje}%
                             </Typography>
                           </Box>
@@ -544,7 +491,7 @@ export function StockAlertasPage() {
                         <Typography
                           variant="body2"
                           sx={{
-                            color: '#b91c1c',
+                            color: UAGRM_TOKENS.colors.ruby,
                             fontWeight: 800,
                             fontSize: '0.925rem',
                           }}
@@ -558,7 +505,7 @@ export function StockAlertasPage() {
                         <Typography
                           variant="body2"
                           sx={{
-                            color: '#1a1a1a',
+                            color: UAGRM_TOKENS.colors.charcoal,
                             fontWeight: 700,
                             fontSize: '0.9rem',
                           }}
@@ -577,14 +524,13 @@ export function StockAlertasPage() {
                               sx={{
                                 width: 36,
                                 height: 36,
-                                borderRadius: '50%',
-                                border: '1px solid #dcd8d0',
-                                color: '#475569',
+                                borderRadius: 2,
+                                border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
+                                color: UAGRM_TOKENS.colors.slate,
                                 backgroundColor: '#ffffff',
                                 '&:hover': {
                                   backgroundColor: '#f8fafc',
-                                  borderColor: '#cbd5e1',
-                                  color: '#1e2b4d',
+                                  color: UAGRM_TOKENS.colors.primaryDark,
                                 },
                               }}
                             >
@@ -593,24 +539,10 @@ export function StockAlertasPage() {
                           </Tooltip>
 
                           <Button
-                            variant="contained"
+                            variant="default"
                             size="small"
                             onClick={() => abrirModalReabastecer(insumo)}
-                            startIcon={<Package size={15} />}
-                            sx={{
-                              backgroundColor: '#2563eb',
-                              color: '#ffffff',
-                              borderRadius: 50,
-                              fontWeight: 700,
-                              fontSize: '0.825rem',
-                              textTransform: 'none',
-                              px: 2.2,
-                              py: 0.7,
-                              boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
-                              '&:hover': {
-                                backgroundColor: '#1d4ed8',
-                              },
-                            }}
+                            icon={<Package size={15} />}
                           >
                             Reabastecer
                           </Button>
@@ -622,31 +554,10 @@ export function StockAlertasPage() {
               </TableBody>
             </Table>
           </TableContainer>
-
-          {/* 4. Footer de la Vista */}
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: { xs: 'column', sm: 'row' },
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              mt: 2.5,
-              px: 1,
-              gap: 1.5,
-            }}
-          >
-            <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600 }}>
-              Mostrando {alertas.length} de {alertas.length} insumos en alerta
-            </Typography>
-
-            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: '0.78rem' }}>
-              © 2026 Imprenta Universitaria · UAGRM &nbsp;·&nbsp; Soporte &nbsp;·&nbsp; Manual de uso &nbsp;·&nbsp; v1.0
-            </Typography>
-          </Box>
         </Box>
       )}
 
-      {/* 3. MODAL POPUP PARA REABASTECIMIENTO RÁPIDO */}
+      {/* MODAL PARA REABASTECIMIENTO RÁPIDO */}
       <Dialog
         open={modalReabastecerAbierto}
         onClose={() => !guardandoReabastecimiento && setModalReabastecerAbierto(false)}
@@ -657,23 +568,23 @@ export function StockAlertasPage() {
             sx: {
               borderRadius: 3.5,
               p: 1,
-              boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+              border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
             },
           },
         }}
       >
         <DialogTitle sx={{ pb: 1, pt: 2.5, px: 3, position: 'relative', textAlign: 'center' }}>
-          <Typography variant="h5" sx={{ fontWeight: 800, color: '#1e2b4d', fontSize: '1.5rem', mb: 0.5 }}>
+          <Typography variant="h5" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.primaryDark, fontSize: '1.4rem', mb: 0.5 }}>
             Ingreso de Stock
           </Typography>
-          <Typography variant="body2" sx={{ fontWeight: 600, color: '#64748b', fontSize: '0.875rem' }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, color: UAGRM_TOKENS.colors.slate, fontSize: '0.875rem' }}>
             Reposición por Déficit Crítico
           </Typography>
           <IconButton
             onClick={() => setModalReabastecerAbierto(false)}
             disabled={guardandoReabastecimiento}
             size="small"
-            sx={{ position: 'absolute', right: 16, top: 16, color: '#94a3b8', '&:hover': { color: '#475569' } }}
+            sx={{ position: 'absolute', right: 16, top: 16, color: UAGRM_TOKENS.colors.mutedSlate }}
           >
             <X size={18} />
           </IconButton>
@@ -682,7 +593,7 @@ export function StockAlertasPage() {
         {insumoParaReabastecer && (
           <form onSubmit={handleEjecutarReabastecimiento}>
             <DialogContent sx={{ px: 2.5, py: 1.5 }}>
-              <Typography variant="body2" sx={{ color: '#64748b', mb: 2, fontSize: '0.85rem' }}>
+              <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate, mb: 2, fontSize: '0.85rem' }}>
                 Registre el ingreso físico al almacén para nivelar el stock de seguridad de <strong>{insumoParaReabastecer.descripcion}</strong>.
               </Typography>
 
@@ -692,7 +603,7 @@ export function StockAlertasPage() {
                   p: 2,
                   mb: 2.5,
                   borderRadius: 2.5,
-                  border: `1px solid ${UAGRM_COLORS.border}`,
+                  border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
                   backgroundColor: '#f8fafc',
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -700,18 +611,18 @@ export function StockAlertasPage() {
                 }}
               >
                 <Box>
-                  <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 700, color: UAGRM_TOKENS.colors.slate, textTransform: 'uppercase' }}>
                     Stock Actual
                   </Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 800, color: '#b91c1c' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.ruby }}>
                     {insumoParaReabastecer.stock_actual} {insumoParaReabastecer.unidad_medida}
                   </Typography>
                 </Box>
                 <Box sx={{ textAlign: 'right' }}>
-                  <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 700, color: UAGRM_TOKENS.colors.slate, textTransform: 'uppercase' }}>
                     Mínimo Requerido
                   </Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 800, color: '#1e2b4d' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.primaryDark }}>
                     {insumoParaReabastecer.stock_minimo} {insumoParaReabastecer.unidad_medida}
                   </Typography>
                 </Box>
@@ -746,62 +657,33 @@ export function StockAlertasPage() {
               </Grid>
             </DialogContent>
 
-            <DialogActions sx={{ p: 2.5, pt: 2, borderTop: `1px solid ${UAGRM_COLORS.border}`, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2.5 }}>
+            <DialogActions sx={{ p: 2.5, pt: 2, borderTop: `1px solid ${UAGRM_TOKENS.border.subtle}`, display: 'flex', justifyContent: 'center', gap: 2 }}>
               <Button
-                onClick={() => setModalReabastecerAbierto(false)}
+                type="button"
+                variant="outline"
                 disabled={guardandoReabastecimiento}
-                sx={{
-                  backgroundColor: '#607285',
-                  color: '#ffffff',
-                  fontWeight: 700,
-                  px: 3.5,
-                  py: 1.1,
-                  borderRadius: 50,
-                  textTransform: 'none',
-                  fontSize: '0.875rem',
-                  minWidth: 125,
-                  '&:hover': {
-                    backgroundColor: '#4f5e6d',
-                  },
-                }}
+                onClick={() => setModalReabastecerAbierto(false)}
+                style={{ minWidth: 125 }}
               >
                 Cancelar
               </Button>
 
               <Button
                 type="submit"
-                variant="contained"
+                variant="default"
                 disabled={guardandoReabastecimiento}
-                endIcon={guardandoReabastecimiento ? <CircularProgress size={16} color="inherit" /> : <PackagePlus size={18} />}
-                sx={{
-                  backgroundColor: '#1e2b4d',
-                  color: '#ffffff',
-                  fontWeight: 700,
-                  px: 3.5,
-                  py: 1.1,
-                  borderRadius: 50,
-                  textTransform: 'none',
-                  fontSize: '0.875rem',
-                  minWidth: 165,
-                  boxShadow: '0 2px 8px rgba(30, 43, 77, 0.25)',
-                  '&:hover': {
-                    backgroundColor: '#141d34',
-                  },
-                  '&.Mui-disabled': {
-                    backgroundColor: '#1e2b4d',
-                    color: '#ffffff',
-                    opacity: 0.65,
-                  },
-                }}
+                isLoading={guardandoReabastecimiento}
+                icon={<PackagePlus size={18} />}
+                style={{ minWidth: 165 }}
               >
-                {guardandoReabastecimiento ? 'Confirmando...' : 'Confirmar'}
+                Confirmar
               </Button>
             </DialogActions>
           </form>
         )}
       </Dialog>
 
-      {/* 4. MODAL POPUP PARA AJUSTE DE PARÁMETROS DE STOCK */}
+      {/* MODAL PARA AJUSTE DE PARÁMETROS DE STOCK */}
       <Dialog
         open={modalAjusteAbierto}
         onClose={() => !guardandoAjuste && setModalAjusteAbierto(false)}
@@ -812,23 +694,23 @@ export function StockAlertasPage() {
             sx: {
               borderRadius: 3.5,
               p: 1,
-              boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+              border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
             },
           },
         }}
       >
         <DialogTitle sx={{ pb: 1, pt: 2.5, px: 3, position: 'relative', textAlign: 'center' }}>
-          <Typography variant="h5" sx={{ fontWeight: 800, color: '#1e2b4d', fontSize: '1.5rem', mb: 0.5 }}>
+          <Typography variant="h5" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.primaryDark, fontSize: '1.4rem', mb: 0.5 }}>
             Ajustar Umbrales
           </Typography>
-          <Typography variant="body2" sx={{ fontWeight: 600, color: '#64748b', fontSize: '0.875rem' }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, color: UAGRM_TOKENS.colors.slate, fontSize: '0.875rem' }}>
             Parámetros de Seguridad de Inventario
           </Typography>
           <IconButton
             onClick={() => setModalAjusteAbierto(false)}
             disabled={guardandoAjuste}
             size="small"
-            sx={{ position: 'absolute', right: 16, top: 16, color: '#94a3b8', '&:hover': { color: '#475569' } }}
+            sx={{ position: 'absolute', right: 16, top: 16, color: UAGRM_TOKENS.colors.mutedSlate }}
           >
             <X size={18} />
           </IconButton>
@@ -837,7 +719,7 @@ export function StockAlertasPage() {
         {insumoParaAjuste && (
           <form onSubmit={handleEjecutarAjuste}>
             <DialogContent sx={{ px: 2.5, py: 1.5 }}>
-              <Typography variant="body2" sx={{ color: '#64748b', mb: 2.5, fontSize: '0.85rem' }}>
+              <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate, mb: 2.5, fontSize: '0.85rem' }}>
                 Ajuste el umbral mínimo para disparar alertas o actualice el costo unitario de reposición para <strong>{insumoParaAjuste.descripcion}</strong>.
               </Typography>
 
@@ -873,55 +755,25 @@ export function StockAlertasPage() {
               </Grid>
             </DialogContent>
 
-            <DialogActions sx={{ p: 2.5, pt: 2, borderTop: `1px solid ${UAGRM_COLORS.border}`, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2.5 }}>
+            <DialogActions sx={{ p: 2.5, pt: 2, borderTop: `1px solid ${UAGRM_TOKENS.border.subtle}`, display: 'flex', justifyContent: 'center', gap: 2 }}>
               <Button
-                onClick={() => setModalAjusteAbierto(false)}
+                type="button"
+                variant="outline"
                 disabled={guardandoAjuste}
-                sx={{
-                  backgroundColor: '#607285',
-                  color: '#ffffff',
-                  fontWeight: 700,
-                  px: 3.5,
-                  py: 1.1,
-                  borderRadius: 50,
-                  textTransform: 'none',
-                  fontSize: '0.875rem',
-                  minWidth: 125,
-                  '&:hover': {
-                    backgroundColor: '#4f5e6d',
-                  },
-                }}
+                onClick={() => setModalAjusteAbierto(false)}
+                style={{ minWidth: 125 }}
               >
                 Cancelar
               </Button>
 
               <Button
                 type="submit"
-                variant="contained"
+                variant="default"
                 disabled={guardandoAjuste}
-                endIcon={guardandoAjuste ? <CircularProgress size={16} color="inherit" /> : <Check size={18} />}
-                sx={{
-                  backgroundColor: '#1e2b4d',
-                  color: '#ffffff',
-                  fontWeight: 700,
-                  px: 3.5,
-                  py: 1.1,
-                  borderRadius: 50,
-                  textTransform: 'none',
-                  fontSize: '0.875rem',
-                  minWidth: 165,
-                  boxShadow: '0 2px 8px rgba(30, 43, 77, 0.25)',
-                  '&:hover': {
-                    backgroundColor: '#141d34',
-                  },
-                  '&.Mui-disabled': {
-                    backgroundColor: '#1e2b4d',
-                    color: '#ffffff',
-                    opacity: 0.65,
-                  },
-                }}
+                isLoading={guardandoAjuste}
+                style={{ minWidth: 165 }}
               >
-                {guardandoAjuste ? 'Confirmando...' : 'Confirmar'}
+                Confirmar
               </Button>
             </DialogActions>
           </form>

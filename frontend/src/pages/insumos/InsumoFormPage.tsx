@@ -5,7 +5,6 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Grid';
-import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
@@ -21,29 +20,13 @@ import {
   Package,
   DollarSign,
   Barcode,
-  Check,
 } from 'lucide-react';
 
 import { insumosApi } from '@/api/insumos.api';
-import { UAGRM_COLORS } from '@/theme/uagrmTheme';
-
-// Categorías institucionales de la Imprenta UAGRM
-const CATEGORIAS_INSUMO = [
-  { id: 1, nombre: 'Papeles y Cartulinas' },
-  { id: 2, nombre: 'Tintas Offset' },
-  { id: 3, nombre: 'Matrices y Planchas' },
-  { id: 4, nombre: 'Químicos y Acabados' },
-];
-
-const UNIDADES_MEDIDA = [
-  'Pliego',
-  'Resma',
-  'Kg',
-  'Litro',
-  'Unidad',
-  'Rollo',
-  'Caja',
-];
+import { Button } from '@/components/ui';
+import { UAGRM_TOKENS } from '@/theme/tokens';
+import { UNIDADES_MEDIDA } from '@/hooks/useInsumos';
+import type { CategoriaInsumoResponse } from '@/types';
 
 export function InsumoFormPage() {
   const navigate = useNavigate();
@@ -59,35 +42,44 @@ export function InsumoFormPage() {
   const [stockMinimo, setStockMinimo] = useState<string>('10');
   const [costoReposicion, setCostoReposicion] = useState<string>('0.00');
 
+  // Categorías de la base de datos
+  const [categorias, setCategorias] = useState<CategoriaInsumoResponse[]>([]);
+
   // Estados de control y feedback
-  const [cargandoInicial, setCargandoInicial] = useState<boolean>(esEdicion);
+  const [cargandoInicial, setCargandoInicial] = useState<boolean>(true);
   const [guardando, setGuardando] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar datos si estamos en modo edición
+  // Cargar categorías y datos si estamos en modo edición
   useEffect(() => {
-    if (!esEdicion || !id) return;
-
-    async function cargarInsumo() {
+    async function inicializar() {
       try {
         setCargandoInicial(true);
         setError(null);
-        const insumo = await insumosApi.obtener(Number(id));
-        setCodigo(insumo.codigo);
-        setDescripcion(insumo.descripcion);
-        setCategoriaId(insumo.categoria_id || 1);
-        setUnidadMedida(insumo.unidad_medida);
-        setStockActual(insumo.stock_actual.toString());
-        setStockMinimo(insumo.stock_minimo.toString());
-        setCostoReposicion(insumo.costo_reposicion.toString());
+
+        const cats = await insumosApi.listarCategorias().catch(() => [] as CategoriaInsumoResponse[]);
+        setCategorias(cats);
+
+        if (esEdicion && id) {
+          const insumo = await insumosApi.obtener(Number(id));
+          setCodigo(insumo.codigo);
+          setDescripcion(insumo.descripcion);
+          setCategoriaId(insumo.categoria_id || (cats[0]?.id_categoria ?? 1));
+          setUnidadMedida(insumo.unidad_medida || 'Pliego');
+          setStockActual(insumo.stock_actual?.toString() || '0');
+          setStockMinimo(insumo.stock_minimo?.toString() || '10');
+          setCostoReposicion(insumo.costo_reposicion?.toString() || '0.00');
+        } else if (cats.length > 0) {
+          setCategoriaId(cats[0].id_categoria);
+        }
       } catch {
-        setError('No se pudo cargar la información del insumo para edición.');
+        setError('No se pudo inicializar los datos del formulario de insumos.');
       } finally {
         setCargandoInicial(false);
       }
     }
 
-    cargarInsumo();
+    inicializar();
   }, [id, esEdicion]);
 
   // Manejador del guardado
@@ -95,17 +87,7 @@ export function InsumoFormPage() {
     event.preventDefault();
     setError(null);
 
-    const payload = {
-      categoria_id: Number(categoriaId),
-      codigo: codigo.trim().toUpperCase(),
-      descripcion: descripcion.trim(),
-      stock_actual: Math.max(0, parseFloat(stockActual) || 0),
-      stock_minimo: Math.max(0, parseFloat(stockMinimo) || 0),
-      costo_reposicion: Math.max(0, parseFloat(costoReposicion) || 0),
-      unidad_medida: unidadMedida,
-    };
-
-    if (!payload.codigo || !payload.descripcion) {
+    if (!codigo.trim() || !descripcion.trim()) {
       setError('Por favor complete todos los campos obligatorios.');
       return;
     }
@@ -113,9 +95,25 @@ export function InsumoFormPage() {
     try {
       setGuardando(true);
       if (esEdicion && id) {
-        await insumosApi.actualizar(Number(id), payload);
+        // En edición no enviamos stock_actual para respetar Kardex
+        await insumosApi.actualizar(Number(id), {
+          categoria_id: Number(categoriaId),
+          codigo: codigo.trim().toUpperCase(),
+          descripcion: descripcion.trim(),
+          unidad_medida: unidadMedida,
+          stock_minimo: Math.max(0, parseFloat(stockMinimo) || 0),
+          costo_reposicion: Math.max(0, parseFloat(costoReposicion) || 0),
+        });
       } else {
-        await insumosApi.crear(payload);
+        await insumosApi.crear({
+          categoria_id: Number(categoriaId),
+          codigo: codigo.trim().toUpperCase(),
+          descripcion: descripcion.trim(),
+          unidad_medida: unidadMedida,
+          stock_actual: Math.max(0, parseFloat(stockActual) || 0),
+          stock_minimo: Math.max(0, parseFloat(stockMinimo) || 0),
+          costo_reposicion: Math.max(0, parseFloat(costoReposicion) || 0),
+        });
       }
       navigate('/insumos');
     } catch {
@@ -132,8 +130,8 @@ export function InsumoFormPage() {
   if (cargandoInicial) {
     return (
       <Box sx={{ p: 6, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-        <CircularProgress size={40} sx={{ color: UAGRM_COLORS.blue.main }} />
-        <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 600 }}>
+        <CircularProgress size={40} sx={{ color: UAGRM_TOKENS.colors.royalBlue }} />
+        <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate, fontWeight: 600 }}>
           Cargando datos del insumo...
         </Typography>
       </Box>
@@ -141,21 +139,18 @@ export function InsumoFormPage() {
   }
 
   return (
-    <Box sx={{ p: { xs: 2, sm: 3, md: 3.5 }, backgroundColor: UAGRM_COLORS.background.default, minHeight: '100%' }}>
-      {/* Botón de retorno y migas de pan */}
+    <Box sx={{ p: { xs: 2, sm: 3, md: 3.5 }, backgroundColor: UAGRM_TOKENS.background.default, minHeight: '100%' }}>
+      {/* Botón de retorno y encabezado */}
       <Box sx={{ mb: 3 }}>
         <Button
           component={Link}
           to="/insumos"
-          startIcon={<ArrowLeft size={16} />}
-          sx={{
-            color: UAGRM_COLORS.red.main,
-            fontWeight: 700,
-            textTransform: 'none',
-            fontSize: '0.875rem',
-            p: 0,
-            mb: 1.5,
-            '&:hover': { backgroundColor: 'transparent', color: UAGRM_COLORS.red.dark },
+          variant="ghost"
+          icon={<ArrowLeft size={16} />}
+          style={{
+            color: UAGRM_TOKENS.colors.ruby,
+            padding: 0,
+            marginBottom: 12,
           }}
         >
           Volver al Catálogo de Insumos
@@ -166,7 +161,7 @@ export function InsumoFormPage() {
           sx={{
             fontWeight: 800,
             letterSpacing: '0.12em',
-            color: UAGRM_COLORS.cyan.main,
+            color: UAGRM_TOKENS.colors.cyan,
             display: 'block',
             lineHeight: 1.2,
           }}
@@ -177,13 +172,13 @@ export function InsumoFormPage() {
           variant="h4"
           sx={{
             fontWeight: 780,
-            color: UAGRM_COLORS.blue.dark,
+            color: UAGRM_TOKENS.colors.primaryDark,
             letterSpacing: '-0.02em',
           }}
         >
           {esEdicion ? 'Editar Insumo de Imprenta' : 'Registrar Nuevo Insumo'}
         </Typography>
-        <Typography variant="body2" sx={{ color: '#64748b', mt: 0.5 }}>
+        <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate, mt: 0.5 }}>
           {esEdicion
             ? `Actualización de parámetros técnicos y costos para ${codigo || 'el insumo'}.`
             : 'Alta de material o insumo litográfico en el catálogo central de la universidad.'}
@@ -203,7 +198,7 @@ export function InsumoFormPage() {
         sx={{
           maxWidth: 900,
           borderRadius: 3,
-          border: `1px solid ${UAGRM_COLORS.border}`,
+          border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
           backgroundColor: '#ffffff',
           boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)',
         }}
@@ -218,16 +213,16 @@ export function InsumoFormPage() {
                     width: 32,
                     height: 32,
                     borderRadius: 2,
-                    backgroundColor: alpha(UAGRM_COLORS.blue.main, 0.08),
+                    backgroundColor: alpha(UAGRM_TOKENS.colors.royalBlue, 0.08),
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: UAGRM_COLORS.blue.main,
+                    color: UAGRM_TOKENS.colors.royalBlue,
                   }}
                 >
                   <Barcode size={18} />
                 </Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 780, color: UAGRM_COLORS.blue.dark }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 780, color: UAGRM_TOKENS.colors.primaryDark }}>
                   1. Identificación y Clasificación
                 </Typography>
               </Box>
@@ -242,6 +237,7 @@ export function InsumoFormPage() {
                     value={codigo}
                     onChange={(e) => setCodigo(e.target.value)}
                     required
+                    disabled={guardando}
                     slotProps={{ htmlInput: { style: { fontFamily: 'monospace', fontWeight: 700 } } }}
                     helperText="Identificador único de almacén"
                   />
@@ -254,13 +250,17 @@ export function InsumoFormPage() {
                       labelId="categoria-label"
                       value={categoriaId}
                       label="Categoría Litográfica *"
+                      disabled={guardando}
                       onChange={(e) => setCategoriaId(Number(e.target.value))}
                     >
-                      {CATEGORIAS_INSUMO.map((cat) => (
-                        <MenuItem key={cat.id} value={cat.id}>
+                      {categorias.map((cat) => (
+                        <MenuItem key={cat.id_categoria} value={cat.id_categoria}>
                           {cat.nombre}
                         </MenuItem>
                       ))}
+                      {categorias.length === 0 && (
+                        <MenuItem value={1}>General</MenuItem>
+                      )}
                     </Select>
                   </FormControl>
                 </Grid>
@@ -272,6 +272,7 @@ export function InsumoFormPage() {
                       labelId="unidad-label"
                       value={unidadMedida}
                       label="Unidad de Medida *"
+                      disabled={guardando}
                       onChange={(e) => setUnidadMedida(e.target.value)}
                     >
                       {UNIDADES_MEDIDA.map((u) => (
@@ -292,13 +293,14 @@ export function InsumoFormPage() {
                     value={descripcion}
                     onChange={(e) => setDescripcion(e.target.value)}
                     required
+                    disabled={guardando}
                     helperText="Nombre comercial, gramaje, dimensiones o características principales"
                   />
                 </Grid>
               </Grid>
             </Box>
 
-            <Divider sx={{ my: 3, borderColor: UAGRM_COLORS.border }} />
+            <Divider sx={{ my: 3, borderColor: UAGRM_TOKENS.border.subtle }} />
 
             {/* Sección 2: Control de Stock y Parámetros Operativos */}
             <Box sx={{ mb: 3.5 }}>
@@ -308,16 +310,16 @@ export function InsumoFormPage() {
                     width: 32,
                     height: 32,
                     borderRadius: 2,
-                    backgroundColor: alpha(UAGRM_COLORS.red.main, 0.08),
+                    backgroundColor: alpha(UAGRM_TOKENS.colors.ruby, 0.08),
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: UAGRM_COLORS.red.main,
+                    color: UAGRM_TOKENS.colors.ruby,
                   }}
                 >
                   <Package size={18} />
                 </Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 780, color: UAGRM_COLORS.blue.dark }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 780, color: UAGRM_TOKENS.colors.primaryDark }}>
                   2. Parámetros de Inventario y Seguridad
                 </Typography>
               </Box>
@@ -332,12 +334,17 @@ export function InsumoFormPage() {
                     value={stockActual}
                     onChange={(e) => setStockActual(e.target.value)}
                     required
+                    disabled={guardando || esEdicion}
                     slotProps={{
                       input: {
                         endAdornment: <InputAdornment position="end">{unidadMedida}</InputAdornment>,
                       },
                     }}
-                    helperText="Saldo físico actual en taller o depósito"
+                    helperText={
+                      esEdicion
+                        ? 'Inalterable directamente. Use "Registrar Movimiento" para Kardex'
+                        : 'Saldo físico inicial en taller o depósito'
+                    }
                   />
                 </Grid>
 
@@ -350,6 +357,7 @@ export function InsumoFormPage() {
                     value={stockMinimo}
                     onChange={(e) => setStockMinimo(e.target.value)}
                     required
+                    disabled={guardando}
                     slotProps={{
                       input: {
                         endAdornment: <InputAdornment position="end">{unidadMedida}</InputAdornment>,
@@ -361,7 +369,7 @@ export function InsumoFormPage() {
               </Grid>
             </Box>
 
-            <Divider sx={{ my: 3, borderColor: UAGRM_COLORS.border }} />
+            <Divider sx={{ my: 3, borderColor: UAGRM_TOKENS.border.subtle }} />
 
             {/* Sección 3: Costos de Reposición */}
             <Box sx={{ mb: 2 }}>
@@ -371,16 +379,16 @@ export function InsumoFormPage() {
                     width: 32,
                     height: 32,
                     borderRadius: 2,
-                    backgroundColor: alpha('#15803d', 0.1),
+                    backgroundColor: alpha(UAGRM_TOKENS.colors.emerald, 0.1),
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#15803d',
+                    color: UAGRM_TOKENS.colors.emerald,
                   }}
                 >
                   <DollarSign size={18} />
                 </Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 780, color: UAGRM_COLORS.blue.dark }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 780, color: UAGRM_TOKENS.colors.primaryDark }}>
                   3. Costos de Reposición y Cotización
                 </Typography>
               </Box>
@@ -395,6 +403,7 @@ export function InsumoFormPage() {
                     value={costoReposicion}
                     onChange={(e) => setCostoReposicion(e.target.value)}
                     required
+                    disabled={guardando}
                     slotProps={{
                       htmlInput: { step: '0.01', min: '0' },
                       input: {
@@ -415,7 +424,7 @@ export function InsumoFormPage() {
               p: 2.5,
               px: { xs: 2.5, sm: 4 },
               backgroundColor: '#f8fafc',
-              borderTop: `1px solid ${UAGRM_COLORS.border}`,
+              borderTop: `1px solid ${UAGRM_TOKENS.border.subtle}`,
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
@@ -426,51 +435,19 @@ export function InsumoFormPage() {
               component={Link}
               to="/insumos"
               disabled={guardando}
-              sx={{
-                backgroundColor: '#607285',
-                color: '#ffffff',
-                fontWeight: 700,
-                px: 3.5,
-                py: 1.1,
-                borderRadius: 50.5,
-                textTransform: 'none',
-                fontSize: '0.875rem',
-                minWidth: 125,
-                '&:hover': {
-                  backgroundColor: '#4f5e6d',
-                },
-              }}
+              variant="outline"
+              style={{ minWidth: 125 }}
             >
               Cancelar
             </Button>
 
             <Button
               type="submit"
-              variant="contained"
-              disabled={guardando}
-              endIcon={guardando ? <CircularProgress size={16} color="inherit" /> : <Check size={18} />}
-              sx={{
-                backgroundColor: '#1e2b4d',
-                color: '#ffffff',
-                fontWeight: 700,
-                px: 3.5,
-                py: 1.1,
-                borderRadius: 2.5,
-                textTransform: 'none',
-                fontSize: '0.875rem',
-                minWidth: 165,
-                boxShadow: '0 2px 8px rgba(30, 43, 77, 0.25)',
-                '&:hover': {
-                  backgroundColor: '#141d34',
-                },
-                '&.Mui-disabled': {
-                  backgroundColor: '#1e2b4d',
-                  color: '#ffffff',
-                  opacity: 0.65,
-                },
-              }}
+              variant="default"
+              isLoading={guardando}
+              style={{ minWidth: 165 }}
             >
-              {guardando ? 'Confirmando...' : 'Confirmar'}
+              {esEdicion ? 'Actualizar Insumo' : 'Registrar Insumo'}
             </Button>
           </Box>
         </form>

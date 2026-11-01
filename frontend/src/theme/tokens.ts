@@ -6,6 +6,17 @@
 
 export const UAGRM_TOKENS = {
   colors: {
+    // Aliases semánticos directos
+    primaryDark: '#141d34',
+    royalBlue: '#1e2b4d',
+    ruby: '#dc2626',
+    emerald: '#10b981',
+    amber: '#f59e0b',
+    cyan: '#55a6bc',
+    charcoal: '#0f172a',
+    slate: '#64748b',
+    mutedSlate: '#94a3b8',
+
     // Azul Marino Institucional (Color Primario)
     primary: {
       main: '#1e2b4d',
@@ -36,7 +47,7 @@ export const UAGRM_TOKENS = {
     },
     // Tipografía y Jerarquía Textual
     text: {
-      primary: '#0f172a',    // Texto principal de alto contraste (nunca azul en cuerpos de tabla)
+      primary: '#0f172a',    // Texto principal de alto contraste
       secondary: '#64748b',  // Subtítulos y metadatos
       muted: '#94a3b8',      // Placeholders y marcas de tiempo
       leadHeader: '#475569', // Cabeceras de tabla institucional
@@ -87,6 +98,17 @@ export const UAGRM_TOKENS = {
       },
     },
   },
+  border: {
+    subtle: '#e2e8f0',
+    focus: '#cbd5e1',
+    danger: '#fecaca',
+    divider: '#f0ede6',
+  },
+  background: {
+    default: '#f4f7fb',
+    paper: '#ffffff',
+    subtle: '#f8fafc',
+  },
   typography: {
     fontFamily: "'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
     weights: {
@@ -131,4 +153,3 @@ export const UAGRM_COLORS = {
 };
 
 export default UAGRM_TOKENS;
-
