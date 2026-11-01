@@ -46,7 +46,8 @@ async def crear(db: AsyncSession, datos: UsuarioCreate) -> UsuarioResponse:
         activo=datos.activo,
     )
     usuario_creado = await repo.crear(nuevo_usuario)
-    return UsuarioResponse.model_validate(usuario_creado)
+    # return UsuarioResponse.model_validate(usuario_creado)
+    return await obtener(db, usuario_creado.id_usuario)
 
 
 async def obtener(db: AsyncSession, id_usuario: int) -> UsuarioResponse:
@@ -82,8 +83,8 @@ async def actualizar(
 
     await db.flush()
     await db.refresh(usuario)
-    return UsuarioResponse.model_validate(usuario)
-
+    # return UsuarioResponse.model_validate(usuario)
+    return await obtener(db, id_usuario)
 
 async def desactivar(db: AsyncSession, id_usuario: int) -> dict:
     repo = UsuarioRepository(db)

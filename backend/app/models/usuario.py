@@ -19,7 +19,8 @@ class Usuario(Base):
     ultimo_acceso: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relaciones
-    rol: Mapped["Rol"] = relationship("Rol", back_populates="usuarios")
+    # rol: Mapped["Rol"] = relationship("Rol", back_populates="usuarios")
+    rol: Mapped["Rol"] = relationship("Rol", back_populates="usuarios", lazy="selectin")
     bitacoras: Mapped[list["Bitacora"]] = relationship("Bitacora", back_populates="usuario")
     proformas: Mapped[list["Proforma"]] = relationship("Proforma", back_populates="usuario")
     ordenes: Mapped[list["OrdenTrabajo"]] = relationship("OrdenTrabajo", back_populates="usuario")

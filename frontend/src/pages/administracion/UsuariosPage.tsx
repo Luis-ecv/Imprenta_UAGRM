@@ -71,15 +71,21 @@ export function UsuariosPage() {
   });
 
   const cargarDatos = useCallback(async () => {
+    setCargando(true);
+    setError(null);
+
+    // 1. Cargar roles reales desde la base de datos
     try {
-      setCargando(true);
-      setError(null);
-      const [resUsuarios, listaRoles] = await Promise.all([
-        usuariosApi.listar({ por_pagina: 100 }),
-        usuariosApi.listarRoles(),
-      ]);
-      setUsuarios(resUsuarios.datos || []);
+      const listaRoles = await usuariosApi.listarRoles();
       setRoles(listaRoles || []);
+    } catch (errRoles) {
+      console.error('Error al cargar roles del servidor:', errRoles);
+    }
+
+    // 2. Cargar usuarios del backend
+    try {
+      const resUsuarios = await usuariosApi.listar({ por_pagina: 100 });
+      setUsuarios(resUsuarios.datos || []);
     } catch {
       setError('Error al sincronizar cuentas de usuario institucional desde el servidor.');
     } finally {
