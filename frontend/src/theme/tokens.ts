@@ -96,6 +96,13 @@ export const UAGRM_TOKENS = {
         border: '#bae6fd',
         text: '#075985',
       },
+      neutral: {
+        main: '#64748b',
+        dark: '#475569',
+        light: '#f1f5f9',
+        border: '#e2e8f0',
+        text: '#334155',
+      },
     },
   },
   border: {

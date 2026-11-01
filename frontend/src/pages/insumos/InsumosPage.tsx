@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 
 import { useInsumos } from '@/hooks/useInsumos';
-import { Button, KpiCard, SearchInput } from '@/components/ui';
+import { Button, KpiCard, SearchInput, Badge } from '@/components/ui';
 import { UAGRM_TOKENS } from '@/theme/tokens';
 import type { InsumoResponse } from '@/types';
 import { formatearMoneda } from '@/utils/formatters';
@@ -76,86 +76,6 @@ export function InsumosPage() {
   const abrirModalEditar = (insumo: InsumoResponse) => {
     setInsumoEditando(insumo);
     setModalInsumoAbierto(true);
-  };
-
-  const renderCategoriaBadge = (catNombre?: string) => (
-    <Box
-      sx={{
-        display: 'inline-block',
-        px: 1.5,
-        py: 0.35,
-        borderRadius: 50,
-        backgroundColor: '#eef8fc',
-        color: '#0284c7',
-        fontWeight: 700,
-        fontSize: '0.78rem',
-        textAlign: 'center',
-        whiteSpace: 'nowrap',
-      }}
-    >
-      {catNombre || 'General'}
-    </Box>
-  );
-
-  const renderEstadoBadge = (stockActual: number, stockMinimo: number) => {
-    if (stockActual <= stockMinimo) {
-      return (
-        <Box
-          sx={{
-            display: 'inline-block',
-            px: 1.5,
-            py: 0.35,
-            borderRadius: 50,
-            backgroundColor: '#fee2e2',
-            color: '#b91c1c',
-            fontWeight: 700,
-            fontSize: '0.75rem',
-            textAlign: 'center',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          Crítico
-        </Box>
-      );
-    }
-    if (stockActual <= stockMinimo * 1.5) {
-      return (
-        <Box
-          sx={{
-            display: 'inline-block',
-            px: 1.5,
-            py: 0.35,
-            borderRadius: 50,
-            backgroundColor: '#fef3c7',
-            color: '#b45309',
-            fontWeight: 700,
-            fontSize: '0.75rem',
-            textAlign: 'center',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          Alerta
-        </Box>
-      );
-    }
-    return (
-      <Box
-        sx={{
-          display: 'inline-block',
-          px: 1.5,
-          py: 0.35,
-          borderRadius: 50,
-          backgroundColor: '#dcfce7',
-          color: '#15803d',
-          fontWeight: 700,
-          fontSize: '0.75rem',
-          textAlign: 'center',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        Normal
-      </Box>
-    );
   };
 
   return (
@@ -209,7 +129,7 @@ export function InsumosPage() {
             style={{
               color: UAGRM_TOKENS.colors.ruby,
               borderColor: UAGRM_TOKENS.border.danger,
-              backgroundColor: '#fef2f2',
+              backgroundColor: UAGRM_TOKENS.colors.status.error.light,
             }}
           >
             Stock Crítico ({metricas.critico})
@@ -314,12 +234,12 @@ export function InsumosPage() {
                   alignItems: 'center',
                   gap: 1,
                   transition: 'all 0.15s ease',
-                  backgroundColor: activa ? UAGRM_TOKENS.colors.primaryDark : '#ffffff',
-                  color: activa ? '#ffffff' : UAGRM_TOKENS.colors.charcoal,
+                  backgroundColor: activa ? UAGRM_TOKENS.colors.primaryDark : UAGRM_TOKENS.colors.background.paper,
+                  color: activa ? UAGRM_TOKENS.colors.text.white : UAGRM_TOKENS.colors.charcoal,
                   border: `1px solid ${activa ? UAGRM_TOKENS.colors.primaryDark : UAGRM_TOKENS.border.subtle}`,
                   '&:hover': {
                     borderColor: activa ? UAGRM_TOKENS.colors.primaryDark : UAGRM_TOKENS.border.focus,
-                    backgroundColor: activa ? UAGRM_TOKENS.colors.primaryDark : '#f8fafc',
+                    backgroundColor: activa ? UAGRM_TOKENS.colors.primaryDark : UAGRM_TOKENS.colors.background.subtle,
                   },
                 }}
               >
@@ -332,8 +252,8 @@ export function InsumosPage() {
                     borderRadius: 50,
                     fontSize: '0.72rem',
                     fontWeight: 700,
-                    backgroundColor: activa ? 'rgba(255,255,255,0.22)' : '#e2e8f0',
-                    color: activa ? '#ffffff' : UAGRM_TOKENS.colors.slate,
+                    backgroundColor: activa ? 'rgba(255,255,255,0.22)' : UAGRM_TOKENS.colors.status.neutral.light,
+                    color: activa ? UAGRM_TOKENS.colors.text.white : UAGRM_TOKENS.colors.slate,
                   }}
                 >
                   {tab.count}
@@ -361,7 +281,7 @@ export function InsumosPage() {
             textAlign: 'center',
             borderRadius: 3,
             border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
-            backgroundColor: '#ffffff',
+            backgroundColor: UAGRM_TOKENS.colors.background.paper,
           }}
         >
           <CircularProgress size={36} sx={{ color: UAGRM_TOKENS.colors.royalBlue, mb: 2 }} />
@@ -377,7 +297,7 @@ export function InsumosPage() {
             textAlign: 'center',
             borderRadius: 3,
             border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
-            backgroundColor: '#ffffff',
+            backgroundColor: UAGRM_TOKENS.colors.background.paper,
           }}
         >
           <Typography variant="h6" sx={{ fontWeight: 700, color: UAGRM_TOKENS.colors.charcoal, mb: 1 }}>
@@ -396,35 +316,35 @@ export function InsumosPage() {
           sx={{
             borderRadius: 3,
             border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
-            backgroundColor: '#ffffff',
+            backgroundColor: UAGRM_TOKENS.colors.background.paper,
             overflow: 'hidden',
           }}
         >
           <Table sx={{ minWidth: 850 }}>
             <TableHead>
-              <TableRow sx={{ backgroundColor: '#faf8f5', borderBottom: `1px solid ${UAGRM_TOKENS.border.subtle}` }}>
-                <TableCell sx={{ fontWeight: 800, color: '#475569', fontSize: '0.78rem', py: 1.8, pl: 3 }}>
+              <TableRow sx={{ backgroundColor: UAGRM_TOKENS.colors.table.headerBg, borderBottom: `1px solid ${UAGRM_TOKENS.border.subtle}` }}>
+                <TableCell sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', py: 1.8, pl: 3 }}>
                   CÓDIGO
                 </TableCell>
-                <TableCell sx={{ fontWeight: 800, color: '#475569', fontSize: '0.78rem', py: 1.8 }}>
+                <TableCell sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', py: 1.8 }}>
                   DESCRIPCIÓN / ESPECIFICACIONES
                 </TableCell>
-                <TableCell sx={{ fontWeight: 800, color: '#475569', fontSize: '0.78rem', py: 1.8 }}>
+                <TableCell sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', py: 1.8 }}>
                   CATEGORÍA
                 </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 800, color: '#475569', fontSize: '0.78rem', py: 1.8 }}>
+                <TableCell align="right" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', py: 1.8 }}>
                   STOCK ACTUAL
                 </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 800, color: '#475569', fontSize: '0.78rem', py: 1.8 }}>
+                <TableCell align="right" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', py: 1.8 }}>
                   STOCK MÍN.
                 </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 800, color: '#475569', fontSize: '0.78rem', py: 1.8 }}>
+                <TableCell align="right" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', py: 1.8 }}>
                   COSTO REPOSICIÓN
                 </TableCell>
-                <TableCell align="center" sx={{ fontWeight: 800, color: '#475569', fontSize: '0.78rem', py: 1.8 }}>
+                <TableCell align="center" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', py: 1.8 }}>
                   ESTADO
                 </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 800, color: '#475569', fontSize: '0.78rem', py: 1.8, pr: 3 }}>
+                <TableCell align="right" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', py: 1.8, pr: 3 }}>
                   ACCIONES
                 </TableCell>
               </TableRow>
@@ -433,6 +353,8 @@ export function InsumosPage() {
               {insumosFiltrados.map((item) => {
                 const stockActual = Number(item.stock_actual);
                 const stockMinimo = Number(item.stock_minimo);
+                const esCritico = stockActual <= stockMinimo;
+                const esAlerta = !esCritico && stockActual <= stockMinimo * 1.5;
 
                 return (
                   <TableRow
@@ -442,6 +364,7 @@ export function InsumosPage() {
                       '&:last-child td, &:last-child th': { border: 0 },
                       borderBottom: `1px solid ${UAGRM_TOKENS.border.subtle}`,
                       transition: 'background-color 0.15s ease',
+                      '&:hover': { backgroundColor: UAGRM_TOKENS.colors.table.rowHover },
                     }}
                   >
                     {/* Código */}
@@ -458,9 +381,11 @@ export function InsumosPage() {
                       </Typography>
                     </TableCell>
 
-                    {/* Categoría */}
+                    {/* Categoría (Badge centralizado) */}
                     <TableCell>
-                      {renderCategoriaBadge(item.categoria?.nombre)}
+                      <Badge variant="info">
+                        {item.categoria?.nombre || 'General'}
+                      </Badge>
                     </TableCell>
 
                     {/* Stock Actual */}
@@ -484,9 +409,11 @@ export function InsumosPage() {
                       </Typography>
                     </TableCell>
 
-                    {/* Estado */}
+                    {/* Estado (Badge centralizado) */}
                     <TableCell align="center">
-                      {renderEstadoBadge(stockActual, stockMinimo)}
+                      <Badge variant={esCritico ? 'error' : esAlerta ? 'warning' : 'success'}>
+                        {esCritico ? 'Crítico' : esAlerta ? 'Alerta' : 'Normal'}
+                      </Badge>
                     </TableCell>
 
                     {/* Acciones */}
@@ -501,10 +428,10 @@ export function InsumosPage() {
                               height: 36,
                               borderRadius: 2,
                               border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
-                              backgroundColor: '#ffffff',
+                              backgroundColor: UAGRM_TOKENS.colors.background.paper,
                               color: UAGRM_TOKENS.colors.charcoal,
                               '&:hover': {
-                                backgroundColor: '#f8fafc',
+                                backgroundColor: UAGRM_TOKENS.colors.background.subtle,
                                 color: UAGRM_TOKENS.colors.primaryDark,
                               },
                             }}
@@ -522,10 +449,10 @@ export function InsumosPage() {
                               height: 36,
                               borderRadius: 2,
                               border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
-                              backgroundColor: '#ffffff',
+                              backgroundColor: UAGRM_TOKENS.colors.background.paper,
                               color: UAGRM_TOKENS.colors.charcoal,
                               '&:hover': {
-                                backgroundColor: '#f8fafc',
+                                backgroundColor: UAGRM_TOKENS.colors.background.subtle,
                                 color: UAGRM_TOKENS.colors.primaryDark,
                               },
                             }}
@@ -543,7 +470,7 @@ export function InsumosPage() {
         </TableContainer>
       )}
 
-      {/* Modales modulares desacoplados */}
+      {/* Modales modulares desacoplados (construidos sobre el componente <Modal /> centralizado) */}
       <MovimientoModal
         insumo={insumoParaMovimiento}
         guardando={guardandoMovimiento}

@@ -199,8 +199,8 @@ export function InsumoFormPage() {
           maxWidth: 900,
           borderRadius: 3,
           border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
-          backgroundColor: '#ffffff',
-          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)',
+          backgroundColor: UAGRM_TOKENS.colors.background.paper,
+          boxShadow: UAGRM_TOKENS.shadows.card,
         }}
       >
         <form onSubmit={handleSubmit}>
@@ -423,7 +423,7 @@ export function InsumoFormPage() {
             sx={{
               p: 2.5,
               px: { xs: 2.5, sm: 4 },
-              backgroundColor: '#f8fafc',
+              backgroundColor: UAGRM_TOKENS.colors.background.subtle,
               borderTop: `1px solid ${UAGRM_TOKENS.border.subtle}`,
               display: 'flex',
               justifyContent: 'center',

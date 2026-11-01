@@ -8,10 +8,6 @@ import IconButton from '@mui/material/IconButton';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
 import TextField from '@mui/material/TextField';
 import Paper from '@mui/material/Paper';
 import Table from '@mui/material/Table';
@@ -23,18 +19,16 @@ import TableContainer from '@mui/material/TableContainer';
 import Checkbox from '@mui/material/Checkbox';
 import Tooltip from '@mui/material/Tooltip';
 import {
-  AlertTriangle,
   RefreshCw,
   Layers,
   CheckCircle2,
-  X,
   PackagePlus,
   Sliders,
   Package,
 } from 'lucide-react';
 
 import { insumosApi } from '@/api/insumos.api';
-import { Button } from '@/components/ui';
+import { Button, Badge, Modal } from '@/components/ui';
 import { UAGRM_TOKENS } from '@/theme/tokens';
 import type { InsumoResponse, MovimientoInventarioCreate } from '@/types';
 import { formatearMoneda } from '@/utils/formatters';
@@ -46,14 +40,14 @@ export function StockAlertasPage() {
   const [horaActual, setHoraActual] = useState<string>('');
   const [seleccionados, setSeleccionados] = useState<number[]>([]);
 
-  // Modal 1: Reabastecimiento rápido (Popup)
+  // Modal 1: Reabastecimiento rápido
   const [modalReabastecerAbierto, setModalReabastecerAbierto] = useState<boolean>(false);
   const [insumoParaReabastecer, setInsumoParaReabastecer] = useState<InsumoResponse | null>(null);
   const [cantidadReabastecer, setCantidadReabastecer] = useState<number>(10);
   const [referenciaReabastecer, setReferenciaReabastecer] = useState<string>('Reposición por stock de seguridad');
   const [guardandoReabastecimiento, setGuardandoReabastecimiento] = useState<boolean>(false);
 
-  // Modal 2: Ajuste de parámetros de stock (Popup)
+  // Modal 2: Ajuste de parámetros de stock
   const [modalAjusteAbierto, setModalAjusteAbierto] = useState<boolean>(false);
   const [insumoParaAjuste, setInsumoParaAjuste] = useState<InsumoResponse | null>(null);
   const [stockMinimoAjuste, setStockMinimoAjuste] = useState<number>(0);
@@ -244,7 +238,7 @@ export function StockAlertasPage() {
               onClick={handleReabastecerCriticoHeader}
               style={{
                 backgroundColor: UAGRM_TOKENS.colors.ruby,
-                boxShadow: '0 4px 14px rgba(220, 38, 38, 0.25)',
+                boxShadow: UAGRM_TOKENS.shadows.buttonSecondary,
               }}
             >
               Reabastecer crítico ({alertas.length})
@@ -269,7 +263,7 @@ export function StockAlertasPage() {
             flexDirection: 'column',
             alignItems: 'center',
             gap: 2,
-            backgroundColor: '#ffffff',
+            backgroundColor: UAGRM_TOKENS.colors.background.paper,
             borderRadius: 3.5,
             border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
           }}
@@ -288,7 +282,7 @@ export function StockAlertasPage() {
             textAlign: 'center',
             borderRadius: 3.5,
             border: `1px dashed ${UAGRM_TOKENS.border.focus}`,
-            backgroundColor: '#ffffff',
+            backgroundColor: UAGRM_TOKENS.colors.background.paper,
           }}
         >
           <Box
@@ -296,8 +290,8 @@ export function StockAlertasPage() {
               width: 56,
               height: 56,
               borderRadius: '50%',
-              backgroundColor: '#ecfdf5',
-              color: UAGRM_TOKENS.colors.emerald,
+              backgroundColor: UAGRM_TOKENS.colors.status.success.light,
+              color: UAGRM_TOKENS.colors.status.success.dark,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -330,13 +324,13 @@ export function StockAlertasPage() {
             sx={{
               borderRadius: 3.5,
               border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
-              backgroundColor: '#ffffff',
+              backgroundColor: UAGRM_TOKENS.colors.background.paper,
               overflow: 'hidden',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+              boxShadow: UAGRM_TOKENS.shadows.card,
             }}
           >
             <Table sx={{ minWidth: 850 }}>
-              <TableHead sx={{ backgroundColor: '#faf8f5' }}>
+              <TableHead sx={{ backgroundColor: UAGRM_TOKENS.colors.table.headerBg }}>
                 <TableRow sx={{ '& th': { borderBottom: `1px solid ${UAGRM_TOKENS.border.subtle}`, py: 2 } }}>
                   <TableCell padding="checkbox" sx={{ pl: 2.5 }}>
                     <Checkbox
@@ -347,22 +341,22 @@ export function StockAlertasPage() {
                       sx={{ color: UAGRM_TOKENS.colors.mutedSlate, '&.Mui-checked': { color: UAGRM_TOKENS.colors.primaryDark } }}
                     />
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: '#475569', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <TableCell sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     Insumo
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: '#475569', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <TableCell sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     Nivel
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: '#475569', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em', minWidth: 220 }}>
+                  <TableCell sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em', minWidth: 220 }}>
                     Stock vs Mínimo
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: '#475569', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <TableCell sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     Déficit
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: '#475569', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <TableCell sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     Costo Reposición
                   </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 800, color: '#475569', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em', pr: 3 }}>
+                  <TableCell align="right" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em', pr: 3 }}>
                     Acción
                   </TableCell>
                 </TableRow>
@@ -382,7 +376,7 @@ export function StockAlertasPage() {
                       key={insumo.id_insumo}
                       hover
                       sx={{
-                        '&:hover': { backgroundColor: '#faf8f5' },
+                        '&:hover': { backgroundColor: UAGRM_TOKENS.colors.table.rowHover },
                         '& td': { borderBottom: `1px solid ${UAGRM_TOKENS.border.subtle}`, py: 2 },
                         '&:last-child td': { borderBottom: 0 },
                       }}
@@ -393,7 +387,7 @@ export function StockAlertasPage() {
                           size="small"
                           checked={isChecked}
                           onChange={() => handleToggleSelect(insumo.id_insumo)}
-                          sx={{ color: '#cbd5e1', '&.Mui-checked': { color: UAGRM_TOKENS.colors.primaryDark } }}
+                          sx={{ color: UAGRM_TOKENS.colors.mutedSlate, '&.Mui-checked': { color: UAGRM_TOKENS.colors.primaryDark } }}
                         />
                       </TableCell>
 
@@ -428,38 +422,22 @@ export function StockAlertasPage() {
                         </Box>
                       </TableCell>
 
-                      {/* Nivel */}
+                      {/* Nivel (Badge centralizado) */}
                       <TableCell>
-                        <Box
-                          component="span"
-                          sx={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 0.6,
-                            backgroundColor: '#fef2f2',
-                            color: UAGRM_TOKENS.colors.ruby,
-                            border: `1px solid ${UAGRM_TOKENS.border.danger}`,
-                            borderRadius: 50,
-                            px: 1.5,
-                            py: 0.4,
-                            fontSize: '0.75rem',
-                            fontWeight: 700,
-                          }}
-                        >
-                          <AlertTriangle size={13} /> Crítico
-                        </Box>
+                        <Badge variant="error" dot>
+                          Crítico
+                        </Badge>
                       </TableCell>
 
                       {/* Stock vs mínimo */}
                       <TableCell>
                         <Box sx={{ width: '100%', maxWidth: 220 }}>
-                          {/* Barra de progreso */}
                           <Box
                             sx={{
                               width: '100%',
                               height: 8,
                               borderRadius: 4,
-                              backgroundColor: '#e2e8f0',
+                              backgroundColor: UAGRM_TOKENS.border.subtle,
                               overflow: 'hidden',
                               mb: 0.7,
                             }}
@@ -527,9 +505,9 @@ export function StockAlertasPage() {
                                 borderRadius: 2,
                                 border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
                                 color: UAGRM_TOKENS.colors.slate,
-                                backgroundColor: '#ffffff',
+                                backgroundColor: UAGRM_TOKENS.colors.background.paper,
                                 '&:hover': {
-                                  backgroundColor: '#f8fafc',
+                                  backgroundColor: UAGRM_TOKENS.colors.background.subtle,
                                   color: UAGRM_TOKENS.colors.primaryDark,
                                 },
                               }}
@@ -557,228 +535,175 @@ export function StockAlertasPage() {
         </Box>
       )}
 
-      {/* MODAL PARA REABASTECIMIENTO RÁPIDO */}
-      <Dialog
-        open={modalReabastecerAbierto}
-        onClose={() => !guardandoReabastecimiento && setModalReabastecerAbierto(false)}
+      {/* MODAL PARA REABASTECIMIENTO RÁPIDO (Construido sobre <Modal />) */}
+      <Modal
+        isOpen={modalReabastecerAbierto}
+        onClose={() => setModalReabastecerAbierto(false)}
+        title="Ingreso de Stock"
+        subtitle="Reposición por Déficit Crítico"
         maxWidth="xs"
-        fullWidth
-        slotProps={{
-          paper: {
-            sx: {
-              borderRadius: 3.5,
-              p: 1,
-              border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
-            },
-          },
-        }}
+        onSubmit={handleEjecutarReabastecimiento}
+        isLoading={guardandoReabastecimiento}
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={guardandoReabastecimiento}
+              onClick={() => setModalReabastecerAbierto(false)}
+              style={{ minWidth: 125 }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              variant="default"
+              isLoading={guardandoReabastecimiento}
+              icon={<PackagePlus size={18} />}
+              style={{ minWidth: 165 }}
+            >
+              Confirmar
+            </Button>
+          </>
+        }
       >
-        <DialogTitle sx={{ pb: 1, pt: 2.5, px: 3, position: 'relative', textAlign: 'center' }}>
-          <Typography variant="h5" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.primaryDark, fontSize: '1.4rem', mb: 0.5 }}>
-            Ingreso de Stock
-          </Typography>
-          <Typography variant="body2" sx={{ fontWeight: 600, color: UAGRM_TOKENS.colors.slate, fontSize: '0.875rem' }}>
-            Reposición por Déficit Crítico
-          </Typography>
-          <IconButton
-            onClick={() => setModalReabastecerAbierto(false)}
-            disabled={guardandoReabastecimiento}
-            size="small"
-            sx={{ position: 'absolute', right: 16, top: 16, color: UAGRM_TOKENS.colors.mutedSlate }}
-          >
-            <X size={18} />
-          </IconButton>
-        </DialogTitle>
-
         {insumoParaReabastecer && (
-          <form onSubmit={handleEjecutarReabastecimiento}>
-            <DialogContent sx={{ px: 2.5, py: 1.5 }}>
-              <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate, mb: 2, fontSize: '0.85rem' }}>
-                Registre el ingreso físico al almacén para nivelar el stock de seguridad de <strong>{insumoParaReabastecer.descripcion}</strong>.
-              </Typography>
+          <Box>
+            <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate, mb: 2, fontSize: '0.85rem' }}>
+              Registre el ingreso físico al almacén para nivelar el stock de seguridad de <strong>{insumoParaReabastecer.descripcion}</strong>.
+            </Typography>
 
-              {/* Tarjeta resumen del insumo */}
-              <Box
-                sx={{
-                  p: 2,
-                  mb: 2.5,
-                  borderRadius: 2.5,
-                  border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
-                  backgroundColor: '#f8fafc',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <Box>
-                  <Typography variant="caption" sx={{ fontWeight: 700, color: UAGRM_TOKENS.colors.slate, textTransform: 'uppercase' }}>
-                    Stock Actual
-                  </Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.ruby }}>
-                    {insumoParaReabastecer.stock_actual} {insumoParaReabastecer.unidad_medida}
-                  </Typography>
-                </Box>
-                <Box sx={{ textAlign: 'right' }}>
-                  <Typography variant="caption" sx={{ fontWeight: 700, color: UAGRM_TOKENS.colors.slate, textTransform: 'uppercase' }}>
-                    Mínimo Requerido
-                  </Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.primaryDark }}>
-                    {insumoParaReabastecer.stock_minimo} {insumoParaReabastecer.unidad_medida}
-                  </Typography>
-                </Box>
+            <Box
+              sx={{
+                p: 2,
+                mb: 2.5,
+                borderRadius: 2.5,
+                border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
+                backgroundColor: UAGRM_TOKENS.colors.background.subtle,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <Box>
+                <Typography variant="caption" sx={{ fontWeight: 700, color: UAGRM_TOKENS.colors.slate, textTransform: 'uppercase' }}>
+                  Stock Actual
+                </Typography>
+                <Typography variant="h6" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.ruby }}>
+                  {insumoParaReabastecer.stock_actual} {insumoParaReabastecer.unidad_medida}
+                </Typography>
               </Box>
+              <Box sx={{ textAlign: 'right' }}>
+                <Typography variant="caption" sx={{ fontWeight: 700, color: UAGRM_TOKENS.colors.slate, textTransform: 'uppercase' }}>
+                  Mínimo Requerido
+                </Typography>
+                <Typography variant="h6" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.primaryDark }}>
+                  {insumoParaReabastecer.stock_minimo} {insumoParaReabastecer.unidad_medida}
+                </Typography>
+              </Box>
+            </Box>
 
-              <Grid container spacing={2}>
-                <Grid size={{ xs: 12 }}>
-                  <TextField
-                    fullWidth
-                    required
-                    autoFocus
-                    type="number"
-                    size="small"
-                    label={`Cantidad a Ingresar (${insumoParaReabastecer.unidad_medida})`}
-                    value={cantidadReabastecer}
-                    onChange={(e) => setCantidadReabastecer(Number(e.target.value))}
-                    slotProps={{
-                      htmlInput: { min: 1, step: 'any' },
-                    }}
-                  />
-                </Grid>
-
-                <Grid size={{ xs: 12 }}>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Glosa / Motivo de Reposición"
-                    value={referenciaReabastecer}
-                    onChange={(e) => setReferenciaReabastecer(e.target.value)}
-                  />
-                </Grid>
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12 }}>
+                <TextField
+                  fullWidth
+                  required
+                  autoFocus
+                  type="number"
+                  size="small"
+                  label={`Cantidad a Ingresar (${insumoParaReabastecer.unidad_medida})`}
+                  value={cantidadReabastecer}
+                  onChange={(e) => setCantidadReabastecer(Number(e.target.value))}
+                  slotProps={{
+                    htmlInput: { min: 1, step: 'any' },
+                  }}
+                />
               </Grid>
-            </DialogContent>
 
-            <DialogActions sx={{ p: 2.5, pt: 2, borderTop: `1px solid ${UAGRM_TOKENS.border.subtle}`, display: 'flex', justifyContent: 'center', gap: 2 }}>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={guardandoReabastecimiento}
-                onClick={() => setModalReabastecerAbierto(false)}
-                style={{ minWidth: 125 }}
-              >
-                Cancelar
-              </Button>
-
-              <Button
-                type="submit"
-                variant="default"
-                disabled={guardandoReabastecimiento}
-                isLoading={guardandoReabastecimiento}
-                icon={<PackagePlus size={18} />}
-                style={{ minWidth: 165 }}
-              >
-                Confirmar
-              </Button>
-            </DialogActions>
-          </form>
+              <Grid size={{ xs: 12 }}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Glosa / Motivo de Reposición"
+                  value={referenciaReabastecer}
+                  onChange={(e) => setReferenciaReabastecer(e.target.value)}
+                />
+              </Grid>
+            </Grid>
+          </Box>
         )}
-      </Dialog>
+      </Modal>
 
-      {/* MODAL PARA AJUSTE DE PARÁMETROS DE STOCK */}
-      <Dialog
-        open={modalAjusteAbierto}
-        onClose={() => !guardandoAjuste && setModalAjusteAbierto(false)}
+      {/* MODAL PARA AJUSTE DE PARÁMETROS DE STOCK (Construido sobre <Modal />) */}
+      <Modal
+        isOpen={modalAjusteAbierto}
+        onClose={() => setModalAjusteAbierto(false)}
+        title="Ajustar Umbrales"
+        subtitle="Parámetros de Seguridad de Inventario"
         maxWidth="xs"
-        fullWidth
-        slotProps={{
-          paper: {
-            sx: {
-              borderRadius: 3.5,
-              p: 1,
-              border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
-            },
-          },
-        }}
+        onSubmit={handleEjecutarAjuste}
+        isLoading={guardandoAjuste}
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={guardandoAjuste}
+              onClick={() => setModalAjusteAbierto(false)}
+              style={{ minWidth: 125 }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              variant="default"
+              isLoading={guardandoAjuste}
+              style={{ minWidth: 165 }}
+            >
+              Confirmar
+            </Button>
+          </>
+        }
       >
-        <DialogTitle sx={{ pb: 1, pt: 2.5, px: 3, position: 'relative', textAlign: 'center' }}>
-          <Typography variant="h5" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.primaryDark, fontSize: '1.4rem', mb: 0.5 }}>
-            Ajustar Umbrales
-          </Typography>
-          <Typography variant="body2" sx={{ fontWeight: 600, color: UAGRM_TOKENS.colors.slate, fontSize: '0.875rem' }}>
-            Parámetros de Seguridad de Inventario
-          </Typography>
-          <IconButton
-            onClick={() => setModalAjusteAbierto(false)}
-            disabled={guardandoAjuste}
-            size="small"
-            sx={{ position: 'absolute', right: 16, top: 16, color: UAGRM_TOKENS.colors.mutedSlate }}
-          >
-            <X size={18} />
-          </IconButton>
-        </DialogTitle>
-
         {insumoParaAjuste && (
-          <form onSubmit={handleEjecutarAjuste}>
-            <DialogContent sx={{ px: 2.5, py: 1.5 }}>
-              <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate, mb: 2.5, fontSize: '0.85rem' }}>
-                Ajuste el umbral mínimo para disparar alertas o actualice el costo unitario de reposición para <strong>{insumoParaAjuste.descripcion}</strong>.
-              </Typography>
+          <Box>
+            <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate, mb: 2.5, fontSize: '0.85rem' }}>
+              Ajuste el umbral mínimo para disparar alertas o actualice el costo unitario de reposición para <strong>{insumoParaAjuste.descripcion}</strong>.
+            </Typography>
 
-              <Grid container spacing={2}>
-                <Grid size={{ xs: 12 }}>
-                  <TextField
-                    fullWidth
-                    required
-                    type="number"
-                    size="small"
-                    label={`Stock Mínimo de Seguridad (${insumoParaAjuste.unidad_medida})`}
-                    value={stockMinimoAjuste}
-                    onChange={(e) => setStockMinimoAjuste(Number(e.target.value))}
-                    slotProps={{
-                      htmlInput: { min: 0, step: 'any' },
-                    }}
-                  />
-                </Grid>
-
-                <Grid size={{ xs: 12 }}>
-                  <TextField
-                    fullWidth
-                    type="number"
-                    size="small"
-                    label="Costo de Reposición (Bs.)"
-                    value={costoAjuste}
-                    onChange={(e) => setCostoAjuste(Number(e.target.value))}
-                    slotProps={{
-                      htmlInput: { min: 0, step: '0.01' },
-                    }}
-                  />
-                </Grid>
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12 }}>
+                <TextField
+                  fullWidth
+                  required
+                  type="number"
+                  size="small"
+                  label={`Stock Mínimo de Seguridad (${insumoParaAjuste.unidad_medida})`}
+                  value={stockMinimoAjuste}
+                  onChange={(e) => setStockMinimoAjuste(Number(e.target.value))}
+                  slotProps={{
+                    htmlInput: { min: 0, step: 'any' },
+                  }}
+                />
               </Grid>
-            </DialogContent>
 
-            <DialogActions sx={{ p: 2.5, pt: 2, borderTop: `1px solid ${UAGRM_TOKENS.border.subtle}`, display: 'flex', justifyContent: 'center', gap: 2 }}>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={guardandoAjuste}
-                onClick={() => setModalAjusteAbierto(false)}
-                style={{ minWidth: 125 }}
-              >
-                Cancelar
-              </Button>
-
-              <Button
-                type="submit"
-                variant="default"
-                disabled={guardandoAjuste}
-                isLoading={guardandoAjuste}
-                style={{ minWidth: 165 }}
-              >
-                Confirmar
-              </Button>
-            </DialogActions>
-          </form>
+              <Grid size={{ xs: 12 }}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  size="small"
+                  label="Costo de Reposición (Bs.)"
+                  value={costoAjuste}
+                  onChange={(e) => setCostoAjuste(Number(e.target.value))}
+                  slotProps={{
+                    htmlInput: { min: 0, step: '0.01' },
+                  }}
+                />
+              </Grid>
+            </Grid>
+          </Box>
         )}
-      </Dialog>
+      </Modal>
 
       {/* Snackbar de notificaciones */}
       <Snackbar
