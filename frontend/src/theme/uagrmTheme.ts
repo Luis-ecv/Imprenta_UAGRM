@@ -5,37 +5,8 @@ import { createTheme, alpha } from '@mui/material/styles';
  * Sistema Integral de Gestión y Predicción de Insumos - Imprenta Universitaria
  */
 
-// Colores institucionales oficiales
-export const UAGRM_COLORS = {
-  // Rojo Guindo Institucional
-  red: {
-    main: '#800000',
-    dark: '#5d0000',
-    light: '#9c1c1c',
-    contrastText: '#ffffff',
-  },
-  // Azul Marino Corporativo
-  blue: {
-    main: '#1e2b4d',
-    dark: '#141d34',
-    light: '#344675',
-    contrastText: '#ffffff',
-  },
-  // Celeste Institucional (Acentos)
-  cyan: {
-    main: '#55a6bc',
-    dark: '#3a7f92',
-    light: '#e8f4f7',
-    contrastText: '#ffffff',
-  },
-  // Fondos y bordes
-  background: {
-    default: '#f4f7fb',
-    paper: '#ffffff',
-    subtle: '#f8fafc',
-  },
-  border: '#e2e8f0',
-};
+import { UAGRM_TOKENS, UAGRM_COLORS } from './tokens';
+export { UAGRM_TOKENS, UAGRM_COLORS };
 
 export const uagrmTheme = createTheme({
   palette: {

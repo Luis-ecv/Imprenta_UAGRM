@@ -1,13 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Grid';
-import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
-import InputAdornment from '@mui/material/InputAdornment';
 import IconButton from '@mui/material/IconButton';
 import CircularProgress from '@mui/material/CircularProgress';
 import Chip from '@mui/material/Chip';
@@ -20,14 +18,15 @@ import DialogActions from '@mui/material/DialogActions';
 import MenuItem from '@mui/material/MenuItem';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
+import InputAdornment from '@mui/material/InputAdornment';
 import { alpha } from '@mui/material/styles';
 import {
   Users,
   Plus,
-  Search,
   Mail,
   ShieldCheck,
   Edit2,
+  Trash2,
   RefreshCw,
   CheckCircle2,
   XCircle,
@@ -37,25 +36,38 @@ import {
   Check,
 } from 'lucide-react';
 
-import { usuariosApi } from '@/api/usuarios.api';
-import { UAGRM_COLORS } from '@/theme/uagrmTheme';
-import type { UsuarioResponse, UsuarioCreate, UsuarioUpdate, RolResponse } from '@/types';
+import { useUsuarios } from '@/hooks/useUsuarios';
+import { Button, ConfirmDialog, SearchInput, KpiCard } from '@/components/ui';
+import { UAGRM_TOKENS } from '@/theme/tokens';
+import type { UsuarioResponse } from '@/types';
 import { formatearFechaHora } from '@/utils/formatters';
 
 export function UsuariosPage() {
-  const [usuarios, setUsuarios] = useState<UsuarioResponse[]>([]);
-  const [roles, setRoles] = useState<RolResponse[]>([]);
-  const [cargando, setCargando] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [busqueda, setBusqueda] = useState<string>('');
+  const {
+    usuarios,
+    roles,
+    cargando,
+    guardando,
+    eliminando,
+    error,
+    busqueda,
+    setBusqueda,
+    usuariosFiltrados,
+    totalActivos,
+    totalOperadores,
+    notificacion,
+    setNotificacion,
+    cargarDatos,
+    guardarUsuario,
+    desactivarUsuario,
+  } = useUsuarios();
 
-  // Modal Dialog states
+  // Estados locales de los diálogos
   const [modalAbierto, setModalAbierto] = useState<boolean>(false);
   const [usuarioEditando, setUsuarioEditando] = useState<UsuarioResponse | null>(null);
-  const [guardando, setGuardando] = useState<boolean>(false);
-  const [notificacion, setNotificacion] = useState<{ tipo: 'success' | 'error'; mensaje: string } | null>(null);
+  const [usuarioAEliminar, setUsuarioAEliminar] = useState<UsuarioResponse | null>(null);
 
-  // Form states
+  // Estado del formulario
   const [formData, setFormData] = useState<{
     nombre_completo: string;
     email: string;
@@ -65,37 +77,10 @@ export function UsuariosPage() {
   }>({
     nombre_completo: '',
     email: '',
-    rol_id: 3, // Operador Mostrador por defecto
+    rol_id: 3,
     password: '',
     activo: true,
   });
-
-  const cargarDatos = useCallback(async () => {
-    setCargando(true);
-    setError(null);
-
-    // 1. Cargar roles reales desde la base de datos
-    try {
-      const listaRoles = await usuariosApi.listarRoles();
-      setRoles(listaRoles || []);
-    } catch (errRoles) {
-      console.error('Error al cargar roles del servidor:', errRoles);
-    }
-
-    // 2. Cargar usuarios del backend
-    try {
-      const resUsuarios = await usuariosApi.listar({ por_pagina: 100 });
-      setUsuarios(resUsuarios.datos || []);
-    } catch {
-      setError('Error al sincronizar cuentas de usuario institucional desde el servidor.');
-    } finally {
-      setCargando(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    cargarDatos();
-  }, [cargarDatos]);
 
   const abrirModalCrear = () => {
     setUsuarioEditando(null);
@@ -146,108 +131,52 @@ export function UsuariosPage() {
       return;
     }
 
-    try {
-      setGuardando(true);
-      if (usuarioEditando) {
-        const updatePayload: UsuarioUpdate = {
-          nombre_completo: formData.nombre_completo.trim(),
-          email: formData.email.trim(),
-          rol_id: formData.rol_id,
-          activo: formData.activo,
-        };
-        if (formData.password.trim()) {
-          updatePayload.password = formData.password.trim();
-        }
-        await usuariosApi.actualizar(usuarioEditando.id_usuario, updatePayload);
-        setNotificacion({
-          tipo: 'success',
-          mensaje: 'Usuario institucional actualizado con éxito.',
-        });
-      } else {
-        const createPayload: UsuarioCreate = {
-          nombre_completo: formData.nombre_completo.trim(),
-          email: formData.email.trim(),
-          rol_id: formData.rol_id,
-          activo: formData.activo,
-          password: formData.password.trim(),
-        };
-        await usuariosApi.crear(createPayload);
-        setNotificacion({
-          tipo: 'success',
-          mensaje: 'Usuario institucional registrado exitosamente.',
-        });
-      }
-      setModalAbierto(false);
-      cargarDatos();
-    } catch {
-      setNotificacion({
-        tipo: 'error',
-        mensaje: 'Ocurrió un error al guardar la cuenta de usuario en el servidor.',
-      });
-    } finally {
-      setGuardando(false);
+    const exito = await guardarUsuario(usuarioEditando?.id_usuario, formData);
+    if (exito) {
+      cerrarModal();
     }
   };
 
-  // Filtrado
-  const usuariosFiltrados = usuarios.filter((u) => {
-    const q = busqueda.toLowerCase();
-    const nombreRol = u.rol?.nombre?.toLowerCase() || '';
-    return (
-      u.nombre_completo.toLowerCase().includes(q) ||
-      u.email.toLowerCase().includes(q) ||
-      nombreRol.includes(q)
-    );
-  });
-
-  // Métricas
-  const totalActivos = usuarios.filter((u) => u.activo).length;
-  const totalOperadores = usuarios.filter((u) => u.rol?.nombre?.includes('Operador')).length;
+  const handleConfirmarDesactivacion = async () => {
+    if (!usuarioAEliminar) return;
+    const exito = await desactivarUsuario(usuarioAEliminar.id_usuario);
+    if (exito) {
+      setUsuarioAEliminar(null);
+    }
+  };
 
   const obtenerColorRol = (nombreRol?: string) => {
     switch (nombreRol) {
       case 'Superadministrador':
-        return { color: UAGRM_COLORS.red.main, bg: alpha(UAGRM_COLORS.red.main, 0.1) };
+        return { color: UAGRM_TOKENS.colors.secondary.main, bg: alpha(UAGRM_TOKENS.colors.secondary.main, 0.1) };
       case 'Administrador':
-        return { color: UAGRM_COLORS.blue.main, bg: alpha(UAGRM_COLORS.blue.main, 0.1) };
+        return { color: UAGRM_TOKENS.colors.primary.main, bg: alpha(UAGRM_TOKENS.colors.primary.main, 0.1) };
       case 'Operador Mostrador':
-        return { color: UAGRM_COLORS.cyan.dark, bg: alpha(UAGRM_COLORS.cyan.main, 0.15) };
+        return { color: UAGRM_TOKENS.colors.accent.dark, bg: alpha(UAGRM_TOKENS.colors.accent.main, 0.15) };
       case 'Operador Taller':
         return { color: '#0d9488', bg: alpha('#0d9488', 0.1) };
       default:
-        return { color: '#475569', bg: '#f1f5f9' };
+        return { color: UAGRM_TOKENS.colors.text.leadHeader, bg: '#f1f5f9' };
     }
   };
 
   return (
-    <Box sx={{ p: { xs: 2, sm: 3, md: 3.5 }, backgroundColor: UAGRM_COLORS.background.default, minHeight: '100%' }}>
+    <Box sx={{ p: { xs: 2, sm: 3, md: 3.5 }, backgroundColor: UAGRM_TOKENS.colors.background.default, minHeight: '100%' }}>
       {/* 1. Encabezado */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2, mb: 3.5 }}>
         <Box>
-          {/* <Typography
-            variant="overline"
-            sx={{
-              fontWeight: 800,
-              letterSpacing: '0.12em',
-              color: UAGRM_COLORS.cyan.main,
-              display: 'block',
-              lineHeight: 1.2,
-            }}
-          >
-            Control de Accesos Institucionales (RBAC)
-          </Typography> */}
           <Typography
             variant="h4"
             sx={{
-              fontWeight: 780,
-              color: UAGRM_COLORS.blue.dark,
+              fontWeight: UAGRM_TOKENS.typography.weights.extraBold,
+              color: UAGRM_TOKENS.colors.primary.dark,
               letterSpacing: '-0.02em',
               mb: 0.5,
             }}
           >
             Usuarios del Sistema
           </Typography>
-          <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.925rem' }}>
+          <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.text.secondary, fontSize: '0.925rem' }}>
             Administración de credenciales, roles operativos y estados de cuenta de la Imprenta Universitaria.
           </Typography>
         </Box>
@@ -258,198 +187,76 @@ export function UsuariosPage() {
             onClick={cargarDatos}
             disabled={cargando}
             startIcon={<RefreshCw size={16} className={cargando ? 'animate-spin' : ''} />}
-            sx={{
-              borderRadius: 50,
-              textTransform: 'none',
-              fontWeight: 700,
-              color: '#475569',
-              borderColor: '#e2e8f0',
-              backgroundColor: '#ffffff',
-              px: 2.2,
-              py: 0.9,
-              '&:hover': {
-                borderColor: '#cbd5e1',
-                backgroundColor: '#f8fafc',
-              },
-            }}
+            sx={{ color: UAGRM_TOKENS.colors.text.leadHeader }}
           >
             Actualizar
           </Button>
 
           <Button
             variant="contained"
+            color="primary"
             startIcon={<Plus size={18} />}
             onClick={abrirModalCrear}
-            sx={{
-              backgroundColor: '#1e2b4d',
-              color: '#ffffff',
-              fontWeight: 700,
-              px: 2.5,
-              py: 1.1,
-              borderRadius: 50,
-              textTransform: 'none',
-              boxShadow: '0 4px 14px rgba(30, 43, 77, 0.25)',
-              '&:hover': {
-                backgroundColor: '#141d34',
-              },
-            }}
           >
             Nuevo Usuario
           </Button>
         </Stack>
       </Box>
 
-      {/* 2. Tarjetas KPI */}
+      {/* 2. Tarjetas KPI Reutilizables */}
       <Grid container spacing={2.5} sx={{ mb: 3.5 }}>
         <Grid size={{ xs: 12, sm: 4 }}>
-          <Card
-            elevation={0}
-            sx={{
-              borderRadius: 3,
-              border: `1px solid ${UAGRM_COLORS.border}`,
-              backgroundColor: '#ffffff',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
-            }}
-          >
-            <CardContent sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Box
-                sx={{
-                  p: 1.5,
-                  borderRadius: 2.5,
-                  backgroundColor: alpha(UAGRM_COLORS.blue.main, 0.1),
-                  color: UAGRM_COLORS.blue.main,
-                }}
-              >
-                <Users size={24} />
-              </Box>
-              <Box>
-                <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
-                  Cuentas Registradas
-                </Typography>
-                <Typography variant="h5" sx={{ fontWeight: 800, color: UAGRM_COLORS.blue.dark }}>
-                  {usuarios.length}
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
+          <KpiCard
+            title="Cuentas Registradas"
+            value={usuarios.length}
+            icon={<Users size={24} />}
+            color="primary"
+            isLoading={cargando}
+          />
         </Grid>
 
         <Grid size={{ xs: 12, sm: 4 }}>
-          <Card
-            elevation={0}
-            sx={{
-              borderRadius: 3,
-              border: `1px solid ${UAGRM_COLORS.border}`,
-              backgroundColor: '#ffffff',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
-            }}
-          >
-            <CardContent sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Box
-                sx={{
-                  p: 1.5,
-                  borderRadius: 2.5,
-                  backgroundColor: alpha('#10b981', 0.1),
-                  color: '#059669',
-                }}
-              >
-                <UserCheck size={24} />
-              </Box>
-              <Box>
-                <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
-                  Usuarios Habilitados
-                </Typography>
-                <Typography variant="h5" sx={{ fontWeight: 800, color: '#059669' }}>
-                  {totalActivos}
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
+          <KpiCard
+            title="Usuarios Habilitados"
+            value={totalActivos}
+            icon={<UserCheck size={24} />}
+            color="success"
+            isLoading={cargando}
+          />
         </Grid>
 
         <Grid size={{ xs: 12, sm: 4 }}>
-          <Card
-            elevation={0}
-            sx={{
-              borderRadius: 3,
-              border: `1px solid ${UAGRM_COLORS.border}`,
-              backgroundColor: '#ffffff',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
-            }}
-          >
-            <CardContent sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Box
-                sx={{
-                  p: 1.5,
-                  borderRadius: 2.5,
-                  backgroundColor: alpha(UAGRM_COLORS.cyan.main, 0.15),
-                  color: UAGRM_COLORS.cyan.dark,
-                }}
-              >
-                <ShieldCheck size={24} />
-              </Box>
-              <Box>
-                <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
-                  Operadores de Imprenta
-                </Typography>
-                <Typography variant="h5" sx={{ fontWeight: 800, color: UAGRM_COLORS.cyan.dark }}>
-                  {totalOperadores}
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
+          <KpiCard
+            title="Operadores de Imprenta"
+            value={totalOperadores}
+            icon={<ShieldCheck size={24} />}
+            color="accent"
+            isLoading={cargando}
+          />
         </Grid>
       </Grid>
 
-      {/* 3. Buscador */}
+      {/* 3. Buscador Reutilizable */}
       <Card
         elevation={0}
         sx={{
           p: 2,
           mb: 3,
           borderRadius: 3,
-          border: `1px solid ${UAGRM_COLORS.border}`,
+          border: `1px solid ${UAGRM_TOKENS.colors.border.default}`,
           backgroundColor: '#ffffff',
         }}
       >
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-          <TextField
-            fullWidth
-            size="small"
-            placeholder="Buscar usuario por nombre, correo institucional o rol..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search size={18} color="#94a3b8" />
-                  </InputAdornment>
-                ),
-              },
-            }}
-            sx={{
-              maxWidth: { sm: 450 },
-              '& .MuiOutlinedInput-root': {
-                borderRadius: 2.5,
-                backgroundColor: '#f8fafc',
-              },
-            }}
-          />
-
-          <Chip
-            label={`${usuariosFiltrados.length} Usuarios`}
-            size="small"
-            sx={{
-              fontWeight: 700,
-              backgroundColor: alpha(UAGRM_COLORS.blue.main, 0.08),
-              color: UAGRM_COLORS.blue.dark,
-            }}
-          />
-        </Stack>
+        <SearchInput
+          placeholder="Buscar usuario por nombre, correo institucional o rol..."
+          value={busqueda}
+          onChange={setBusqueda}
+          countLabel={`${usuariosFiltrados.length} Usuarios`}
+          maxWidth="100%"
+        />
       </Card>
 
-      {/* 4. Notificaciones de error */}
+      {/* 4. Notificaciones de error de carga */}
       {error && (
         <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
           {error}
@@ -459,8 +266,8 @@ export function UsuariosPage() {
       {/* 5. Cuadrícula de Usuarios */}
       {cargando ? (
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 8 }}>
-          <CircularProgress sx={{ color: UAGRM_COLORS.red.main, mb: 2 }} />
-          <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 600 }}>
+          <CircularProgress sx={{ color: UAGRM_TOKENS.colors.secondary.main, mb: 2 }} />
+          <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.text.secondary, fontWeight: 600 }}>
             Sincronizando cuentas institucionales...
           </Typography>
         </Box>
@@ -471,29 +278,23 @@ export function UsuariosPage() {
             textAlign: 'center',
             backgroundColor: '#ffffff',
             borderRadius: 3,
-            border: `1px dashed ${UAGRM_COLORS.border}`,
+            border: `1px dashed ${UAGRM_TOKENS.colors.border.default}`,
           }}
         >
-          <Users size={42} color="#94a3b8" style={{ marginBottom: 12 }} />
-          <Typography variant="h6" sx={{ fontWeight: 700, color: '#334155' }}>
+          <Users size={42} color={UAGRM_TOKENS.colors.text.muted} style={{ marginBottom: 12 }} />
+          <Typography variant="h6" sx={{ fontWeight: 700, color: UAGRM_TOKENS.colors.text.primary }}>
             No se encontraron usuarios
           </Typography>
-          <Typography variant="body2" sx={{ color: '#64748b', maxWidth: 400, mx: 'auto', mt: 0.5, mb: 2.5 }}>
+          <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.text.secondary, maxWidth: 400, mx: 'auto', mt: 0.5, mb: 2.5 }}>
             {busqueda
               ? 'No hay registros que coincidan con la búsqueda.'
               : 'Registre nuevos operadores o jefes de taller para gestionar la imprenta.'}
           </Typography>
           <Button
             variant="contained"
+            color="secondary"
             startIcon={<Plus size={16} />}
             onClick={abrirModalCrear}
-            sx={{
-              backgroundColor: UAGRM_COLORS.red.main,
-              fontWeight: 700,
-              textTransform: 'none',
-              borderRadius: 2,
-              '&:hover': { backgroundColor: UAGRM_COLORS.red.dark },
-            }}
           >
             Registrar Primer Usuario
           </Button>
@@ -510,17 +311,17 @@ export function UsuariosPage() {
                   elevation={0}
                   sx={{
                     borderRadius: 3,
-                    border: `1px solid ${UAGRM_COLORS.border}`,
+                    border: `1px solid ${UAGRM_TOKENS.colors.border.default}`,
                     backgroundColor: '#ffffff',
                     height: '100%',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
-                    boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
+                    boxShadow: UAGRM_TOKENS.shadows.card,
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
-                      borderColor: alpha(UAGRM_COLORS.blue.main, 0.3),
+                      boxShadow: UAGRM_TOKENS.shadows.cardHover,
+                      borderColor: alpha(UAGRM_TOKENS.colors.primary.main, 0.3),
                     },
                   }}
                 >
@@ -544,10 +345,10 @@ export function UsuariosPage() {
                           {u.nombre_completo.charAt(0).toUpperCase()}
                         </Box>
                         <Box>
-                          <Typography variant="body1" sx={{ fontWeight: 800, color: "#0f172a", lineHeight: 1.2 }}>
+                          <Typography variant="body1" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.text.primary, lineHeight: 1.2 }}>
                             {u.nombre_completo}
                           </Typography>
-                          <Typography variant="caption" sx={{ color: '#64748b' }}>
+                          <Typography variant="caption" sx={{ color: UAGRM_TOKENS.colors.text.muted }}>
                             ID #{u.id_usuario}
                           </Typography>
                         </Box>
@@ -560,28 +361,30 @@ export function UsuariosPage() {
                         sx={{
                           fontWeight: 700,
                           fontSize: '0.7rem',
-                          backgroundColor: u.activo ? alpha('#10b981', 0.1) : alpha('#ef4444', 0.1),
-                          color: u.activo ? '#059669' : '#dc2626',
+                          borderRadius: UAGRM_TOKENS.radii.pill,
+                          backgroundColor: u.activo ? UAGRM_TOKENS.colors.status.success.light : UAGRM_TOKENS.colors.status.error.light,
+                          color: u.activo ? UAGRM_TOKENS.colors.status.success.dark : UAGRM_TOKENS.colors.status.error.dark,
                         }}
                       />
                     </Box>
 
                     <Stack spacing={1.2} sx={{ mt: 1 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#475569', fontSize: '0.85rem' }}>
-                        <Mail size={15} color="#94a3b8" />
-                        <Typography variant="body2" sx={{ fontSize: '0.85rem', color: '#334155', fontWeight: 600 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: UAGRM_TOKENS.colors.text.leadHeader, fontSize: '0.85rem' }}>
+                        <Mail size={15} color={UAGRM_TOKENS.colors.text.muted} />
+                        <Typography variant="body2" sx={{ fontSize: '0.85rem', color: UAGRM_TOKENS.colors.text.primary, fontWeight: 600 }}>
                           {u.email}
                         </Typography>
                       </Box>
 
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <ShieldCheck size={15} color="#94a3b8" />
+                        <ShieldCheck size={15} color={UAGRM_TOKENS.colors.text.muted} />
                         <Chip
                           label={nombreRol || `Rol #${u.rol_id}`}
                           size="small"
                           sx={{
                             fontWeight: 700,
                             fontSize: '0.75rem',
+                            borderRadius: UAGRM_TOKENS.radii.pill,
                             backgroundColor: estiloRol.bg,
                             color: estiloRol.color,
                           }}
@@ -589,7 +392,7 @@ export function UsuariosPage() {
                       </Box>
 
                       {u.ultimo_acceso && (
-                        <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', pt: 0.5 }}>
+                        <Typography variant="caption" sx={{ color: UAGRM_TOKENS.colors.text.muted, display: 'block', pt: 0.5 }}>
                           Último ingreso: {formatearFechaHora(u.ultimo_acceso)}
                         </Typography>
                       )}
@@ -600,27 +403,34 @@ export function UsuariosPage() {
                     sx={{
                       p: 1.5,
                       px: 2.5,
-                      backgroundColor: '#f8fafc',
-                      borderTop: `1px solid ${UAGRM_COLORS.border}`,
+                      backgroundColor: UAGRM_TOKENS.colors.background.subtle,
+                      borderTop: `1px solid ${UAGRM_TOKENS.colors.border.default}`,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'flex-end',
+                      gap: 1,
                     }}
                   >
                     <Button
                       size="small"
+                      variant="text"
                       startIcon={<Edit2 size={14} />}
                       onClick={() => abrirModalEditar(u)}
-                      sx={{
-                        color: UAGRM_COLORS.blue.main,
-                        fontWeight: 700,
-                        textTransform: 'none',
-                        fontSize: '0.8rem',
-                        '&:hover': { backgroundColor: alpha(UAGRM_COLORS.blue.main, 0.08) },
-                      }}
+                      sx={{ color: UAGRM_TOKENS.colors.primary.main, fontSize: '0.8rem' }}
                     >
-                      Editar Usuario
+                      Editar
                     </Button>
+                    {u.activo && (
+                      <Button
+                        size="small"
+                        variant="text"
+                        startIcon={<Trash2 size={14} />}
+                        onClick={() => setUsuarioAEliminar(u)}
+                        sx={{ color: UAGRM_TOKENS.colors.status.error.main, fontSize: '0.8rem' }}
+                      >
+                        Desactivar
+                      </Button>
+                    )}
                   </Box>
                 </Card>
               </Grid>
@@ -629,7 +439,7 @@ export function UsuariosPage() {
         </Grid>
       )}
 
-      {/* 6. MODAL POPUP PARA REGISTRAR / EDITAR USUARIO (SIN REDIRECCIONAMIENTO) */}
+      {/* 6. Modal de Registro y Edición */}
       <Dialog
         open={modalAbierto}
         onClose={cerrarModal}
@@ -640,26 +450,26 @@ export function UsuariosPage() {
             sx: {
               borderRadius: 3.5,
               p: 1,
-              boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+              boxShadow: UAGRM_TOKENS.shadows.modal,
             },
           },
         }}
       >
         <DialogTitle sx={{ pb: 1, pt: 2.5, px: 3, position: 'relative', textAlign: 'center' }}>
-          <Typography variant="h5" sx={{ fontWeight: 800, color: '#1e2b4d', fontSize: '1.5rem', mb: 0.5 }}>
+          <Typography variant="h5" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.primary.main, fontSize: '1.5rem', mb: 0.5 }}>
             {usuarioEditando ? 'Editar Usuario' : 'Nuevo Usuario'}
           </Typography>
-          <Typography variant="body2" sx={{ fontWeight: 600, color: '#64748b', fontSize: '0.875rem' }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, color: UAGRM_TOKENS.colors.text.secondary, fontSize: '0.875rem' }}>
             Control de Accesos y Seguridad
           </Typography>
-          <IconButton onClick={cerrarModal} disabled={guardando} size="small" sx={{ position: 'absolute', right: 16, top: 16, color: '#94a3b8', '&:hover': { color: '#475569' } }}>
+          <IconButton onClick={cerrarModal} disabled={guardando} size="small" sx={{ position: 'absolute', right: 16, top: 16, color: UAGRM_TOKENS.colors.text.muted }}>
             <X size={18} />
           </IconButton>
         </DialogTitle>
 
         <form onSubmit={handleGuardar}>
           <DialogContent sx={{ px: 2.5, py: 1.5 }}>
-            <Typography variant="body2" sx={{ color: '#64748b', mb: 2.5, fontSize: '0.85rem' }}>
+            <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.text.secondary, mb: 2.5, fontSize: '0.85rem' }}>
               Configure los datos de acceso y el nivel de autorización correspondiente en la plataforma.
             </Typography>
 
@@ -705,7 +515,7 @@ export function UsuariosPage() {
                           {r.nombre}
                         </Typography>
                         {r.descripcion && (
-                          <Typography variant="caption" sx={{ color: '#64748b', display: 'block' }}>
+                          <Typography variant="caption" sx={{ color: UAGRM_TOKENS.colors.text.secondary, display: 'block' }}>
                             {r.descripcion}
                           </Typography>
                         )}
@@ -729,7 +539,7 @@ export function UsuariosPage() {
                     input: {
                       startAdornment: (
                         <InputAdornment position="start">
-                          <Lock size={16} color="#94a3b8" />
+                          <Lock size={16} color={UAGRM_TOKENS.colors.text.muted} />
                         </InputAdornment>
                       ),
                     },
@@ -747,7 +557,7 @@ export function UsuariosPage() {
                     />
                   }
                   label={
-                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: UAGRM_TOKENS.colors.text.primary }}>
                       Cuenta Activa y Habilitada para Iniciar Sesión
                     </Typography>
                   }
@@ -756,24 +566,13 @@ export function UsuariosPage() {
             </Grid>
           </DialogContent>
 
-          <DialogActions sx={{ p: 2.5, pt: 2, borderTop: `1px solid ${UAGRM_COLORS.border}`, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2.5 }}>
+          <DialogActions sx={{ p: 2.5, pt: 2, borderTop: `1px solid ${UAGRM_TOKENS.colors.border.default}`, display: 'flex', justifyContent: 'center', gap: 2 }}>
             <Button
+              variant="outlined"
+              color="inherit"
               onClick={cerrarModal}
               disabled={guardando}
-              sx={{
-                backgroundColor: '#607285',
-                color: '#ffffff',
-                fontWeight: 700,
-                px: 3.5,
-                py: 1.1,
-                borderRadius: 50.5,
-                textTransform: 'none',
-                fontSize: '0.875rem',
-                minWidth: 125,
-                '&:hover': {
-                  backgroundColor: '#4f5e6d',
-                },
-              }}
+              sx={{ px: 3.5, color: UAGRM_TOKENS.colors.text.leadHeader }}
             >
               Cancelar
             </Button>
@@ -781,36 +580,32 @@ export function UsuariosPage() {
             <Button
               type="submit"
               variant="contained"
+              color="primary"
               disabled={guardando}
-              endIcon={guardando ? <CircularProgress size={16} color="inherit" /> : <Check size={18} />}
-              sx={{
-                backgroundColor: '#1e2b4d',
-                color: '#ffffff',
-                fontWeight: 700,
-                px: 3.5,
-                py: 1.1,
-                borderRadius: 2.5,
-                textTransform: 'none',
-                fontSize: '0.875rem',
-                minWidth: 165,
-                boxShadow: '0 2px 8px rgba(30, 43, 77, 0.25)',
-                '&:hover': {
-                  backgroundColor: '#141d34',
-                },
-                '&.Mui-disabled': {
-                  backgroundColor: '#1e2b4d',
-                  color: '#ffffff',
-                  opacity: 0.65,
-                },
-              }}
+              isLoading={guardando}
+              endIcon={!guardando ? <Check size={18} /> : undefined}
+              sx={{ px: 3.5, minWidth: 160 }}
             >
-              {guardando ? 'Confirmando...' : 'Confirmar'}
+              Confirmar
             </Button>
           </DialogActions>
         </form>
       </Dialog>
 
-      {/* Snackbar de retroalimentación */}
+      {/* 7. Diálogo Reutilizable de Confirmación de Desactivación */}
+      <ConfirmDialog
+        open={Boolean(usuarioAEliminar)}
+        onClose={() => setUsuarioAEliminar(null)}
+        onConfirm={handleConfirmarDesactivacion}
+        title="¿Desactivar Usuario?"
+        description={`Se deshabilitará el acceso de ${usuarioAEliminar?.nombre_completo} (${usuarioAEliminar?.email}). Esta acción puede ser revertida editando el estado de la cuenta.`}
+        confirmText="Sí, Desactivar"
+        cancelText="Cancelar"
+        isDestructive
+        isLoading={eliminando}
+      />
+
+      {/* 8. Snackbar de retroalimentación */}
       <Snackbar
         open={Boolean(notificacion)}
         autoHideDuration={4000}
@@ -830,3 +625,5 @@ export function UsuariosPage() {
     </Box>
   );
 }
+
+export default UsuariosPage;
