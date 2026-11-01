@@ -1,26 +1,30 @@
-﻿import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Users, Check, AlertCircle, Loader2 } from 'lucide-react'
-import { clientesApi } from '@/api/clientes.api'
-import type { TipoCliente } from '@/types'
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Users, Check, AlertCircle } from 'lucide-react';
+import { clientesApi } from '@/api/clientes.api';
+import type { TipoCliente } from '@/types';
+import { Button } from '@/components/ui';
+import { UAGRM_TOKENS } from '@/theme/tokens';
+import { TIPOS_CLIENTE_OPCIONES } from '@/hooks/useClientes';
 
 export function ClienteFormPage() {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
-  const [razonSocial, setRazonSocial] = useState('')
-  const [tipoCliente, setTipoCliente] = useState<TipoCliente>('facultad')
-  const [nitCi, setNitCi] = useState('')
-  const [telefono, setTelefono] = useState('')
-  const [email, setEmail] = useState('')
-  const [contacto, setContacto] = useState('')
+  const [razonSocial, setRazonSocial] = useState('');
+  const [tipoCliente, setTipoCliente] = useState<TipoCliente>('facultad');
+  const [nitCi, setNitCi] = useState('');
+  const [telefono, setTelefono] = useState('');
+  const [email, setEmail] = useState('');
+  const [contacto, setContacto] = useState('');
 
-  const [guardando, setGuardando] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault()
+    event.preventDefault();
     try {
-      setGuardando(true)
+      setGuardando(true);
+      setError(null);
       await clientesApi.crear({
         razon_social: razonSocial,
         tipo_cliente: tipoCliente,
@@ -28,12 +32,12 @@ export function ClienteFormPage() {
         telefono: telefono || undefined,
         email: email || undefined,
         contacto_responsable: contacto || undefined,
-      })
-      navigate('/clientes')
+      });
+      navigate('/clientes');
     } catch {
-      setError('Error al registrar el cliente en el sistema.')
+      setError('Error al registrar el cliente en el sistema.');
     } finally {
-      setGuardando(false)
+      setGuardando(false);
     }
   }
 
@@ -41,32 +45,60 @@ export function ClienteFormPage() {
     <div className="max-w-2xl mx-auto space-y-6">
       <Link
         to="/clientes"
-        className="inline-flex items-center gap-2 text-sm font-bold text-[#800000] hover:text-[#670000] transition"
+        className="inline-flex items-center gap-2 text-sm font-bold transition hover:opacity-80"
+        style={{ color: UAGRM_TOKENS.colors.ruby }}
       >
         <ArrowLeft size={16} /> Volver a clientes
       </Link>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
-        <div className="border-b border-slate-100 pb-3">
-          <h1 className="text-2xl font-extrabold text-[#263454] flex items-center gap-2">
-            <Users size={22} className="text-[#800000]" />
+      <div
+        className="rounded-2xl p-6 shadow-sm space-y-5"
+        style={{
+          backgroundColor: UAGRM_TOKENS.colors.background.paper,
+          border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
+        }}
+      >
+        <div
+          className="pb-3"
+          style={{ borderBottom: `1px solid ${UAGRM_TOKENS.border.subtle}` }}
+        >
+          <h1
+            className="text-2xl font-extrabold flex items-center gap-2"
+            style={{ color: UAGRM_TOKENS.colors.primaryDark }}
+          >
+            <Users size={22} style={{ color: UAGRM_TOKENS.colors.ruby }} />
             Registrar Solicitante / Cliente
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p
+            className="text-xs mt-0.5"
+            style={{ color: UAGRM_TOKENS.colors.slate }}
+          >
             Alta de facultad, unidad académica o cliente particular.
           </p>
         </div>
 
         {error && (
-          <div className="flex items-center gap-3 p-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-sm">
-            <AlertCircle size={18} className="shrink-0 text-rose-600" />
+          <div
+            className="flex items-center gap-3 p-4 rounded-xl text-sm"
+            style={{
+              backgroundColor: UAGRM_TOKENS.colors.status.error.light,
+              borderColor: UAGRM_TOKENS.border.danger,
+              borderWidth: 1,
+              borderStyle: 'solid',
+              color: UAGRM_TOKENS.colors.status.error.dark,
+            }}
+          >
+            <AlertCircle size={18} className="shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
+            <label
+              className="block text-xs font-bold uppercase mb-1"
+              style={{ color: UAGRM_TOKENS.colors.charcoal }}
+            >
               Razón Social / Nombre de Unidad o Facultad *
             </label>
             <input
@@ -81,7 +113,10 @@ export function ClienteFormPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
+              <label
+                className="block text-xs font-bold uppercase mb-1"
+                style={{ color: UAGRM_TOKENS.colors.charcoal }}
+              >
                 Tipo de Solicitante *
               </label>
               <select
@@ -89,16 +124,19 @@ export function ClienteFormPage() {
                 onChange={(e) => setTipoCliente(e.target.value as TipoCliente)}
                 className="form-input text-sm font-semibold"
               >
-                <option value="facultad">Facultad / Carrera UAGRM</option>
-                <option value="docente">Docente Universitario</option>
-                <option value="autoridad">Autoridad / Rectorado</option>
-                <option value="estudiante">Estudiante</option>
-                <option value="particular">Particular / Externo</option>
+                {TIPOS_CLIENTE_OPCIONES.map((opt) => (
+                  <option key={opt.valor} value={opt.valor}>
+                    {opt.label}
+                  </option>
+                ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
+              <label
+                className="block text-xs font-bold uppercase mb-1"
+                style={{ color: UAGRM_TOKENS.colors.charcoal }}
+              >
                 NIT o Cédula de Identidad
               </label>
               <input
@@ -113,7 +151,10 @@ export function ClienteFormPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
+              <label
+                className="block text-xs font-bold uppercase mb-1"
+                style={{ color: UAGRM_TOKENS.colors.charcoal }}
+              >
                 Teléfono / Celular
               </label>
               <input
@@ -126,7 +167,10 @@ export function ClienteFormPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
+              <label
+                className="block text-xs font-bold uppercase mb-1"
+                style={{ color: UAGRM_TOKENS.colors.charcoal }}
+              >
                 Correo Electrónico
               </label>
               <input
@@ -140,7 +184,10 @@ export function ClienteFormPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
+            <label
+              className="block text-xs font-bold uppercase mb-1"
+              style={{ color: UAGRM_TOKENS.colors.charcoal }}
+            >
               Nombre de Contacto / Responsable
             </label>
             <input
@@ -153,23 +200,29 @@ export function ClienteFormPage() {
           </div>
 
           <div className="flex items-center justify-center gap-3 pt-3">
-            <Link
+            <Button
+              variant="outline"
+              component={Link}
               to="/clientes"
-              className="flex items-center justify-center rounded-full bg-[#607285] px-6 py-2.5 text-sm font-bold text-white shadow hover:bg-[#4f5e6d] transition min-w-[125px]"
+              disabled={guardando}
+              style={{ minWidth: 125 }}
             >
               Cancelar
-            </Link>
-            <button
+            </Button>
+            <Button
               type="submit"
+              variant="default"
               disabled={guardando}
-              className="flex items-center justify-center gap-2 rounded-full bg-[#1e2b4d] px-6 py-2.5 text-sm font-bold text-white shadow hover:bg-[#141d34] transition disabled:opacity-60 cursor-pointer min-w-[165px]"
+              isLoading={guardando}
+              icon={<Check size={18} />}
+              style={{ minWidth: 165 }}
             >
-              {guardando ? <Loader2 size={16} className="animate-spin" /> : <Check size={18} />}
-              <span>Confirmar</span>
-            </button>
+              Confirmar
+            </Button>
           </div>
         </form>
       </div>
     </div>
-  )
+  );
 }
+export default ClienteFormPage;

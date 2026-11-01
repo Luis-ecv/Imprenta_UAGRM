@@ -98,3 +98,4 @@ export const FilterTabs: React.FC<FilterTabsProps> = ({
 };
 
 export default FilterTabs;
+

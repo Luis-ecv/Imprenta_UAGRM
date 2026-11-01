@@ -378,18 +378,6 @@ export function StockAlertasPage() {
       >
         <Box>
           <Typography
-            variant="overline"
-            sx={{
-              fontWeight: 800,
-              letterSpacing: '0.12em',
-              color: UAGRM_TOKENS.colors.ruby,
-              display: 'block',
-              lineHeight: 1.2,
-            }}
-          >
-            Control de Inventario Crítico
-          </Typography>
-          <Typography
             variant="h4"
             sx={{
               fontWeight: 780,

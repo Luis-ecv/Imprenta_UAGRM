@@ -213,18 +213,6 @@ export function InsumosPage() {
       <Box sx={{ mb: 3.5, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Typography
-            variant="overline"
-            sx={{
-              fontWeight: 800,
-              letterSpacing: '0.12em',
-              color: UAGRM_TOKENS.colors.cyan,
-              display: 'block',
-              lineHeight: 1.2,
-            }}
-          >
-            Gestión de Almacén
-          </Typography>
-          <Typography
             variant="h4"
             sx={{
               fontWeight: 780,
