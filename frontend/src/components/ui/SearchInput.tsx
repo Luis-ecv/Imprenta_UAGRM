@@ -13,7 +13,7 @@ export interface SearchInputProps {
   placeholder?: string;
   debounceMs?: number;
   fullWidth?: boolean;
-  maxWidth?: number | string;
+  maxWidth?: number | string | Record<string, number | string>;
   disabled?: boolean;
   countLabel?: string | number;
   size?: 'small' | 'medium';
@@ -107,7 +107,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
         sx={{
           '& .MuiOutlinedInput-root': {
             borderRadius: 2.5,
-            backgroundColor: UAGRM_TOKENS.colors.background.subtle,
+            backgroundColor: UAGRM_TOKENS.colors.background.paper,
             borderColor: UAGRM_TOKENS.colors.border.default,
             transition: 'border-color 0.2s ease',
             '&:hover fieldset': {

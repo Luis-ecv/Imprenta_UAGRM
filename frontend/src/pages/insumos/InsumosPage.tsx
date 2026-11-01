@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 
 import { useInsumos } from '@/hooks/useInsumos';
-import { Button, KpiCard, SearchInput, Badge, Table, type Column } from '@/components/ui';
+import { Button, KpiCard, SearchInput, Badge, Table, FilterTabs, type Column } from '@/components/ui';
 import { UAGRM_TOKENS } from '@/theme/tokens';
 import type { InsumoResponse } from '@/types';
 import { formatearMoneda } from '@/utils/formatters';
@@ -332,73 +332,22 @@ export function InsumosPage() {
         </Grid>
       </Grid>
 
-      {/* 3. Filtros: Tabs de Categoría y Buscador */}
-      <Box sx={{ mb: 3 }}>
-        {/* Pestañas de categoría estilo chip */}
-        <Stack
-          direction="row"
-          spacing={1}
-          sx={{
-            overflowX: 'auto',
-            pb: 1.5,
-            mb: 2,
-            scrollbarWidth: 'thin',
-          }}
-        >
-          {tabsCategoria.map((tab) => {
-            const activa = categoriaSeleccionada === tab.key;
-            return (
-              <Box
-                key={tab.key}
-                onClick={() => setCategoriaSeleccionada(tab.key)}
-                sx={{
-                  px: 2,
-                  py: 0.8,
-                  borderRadius: 50,
-                  fontSize: '0.85rem',
-                  fontWeight: activa ? 750 : 600,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 1,
-                  transition: 'all 0.15s ease',
-                  backgroundColor: activa ? UAGRM_TOKENS.colors.primaryDark : UAGRM_TOKENS.colors.background.paper,
-                  color: activa ? UAGRM_TOKENS.colors.text.white : UAGRM_TOKENS.colors.charcoal,
-                  border: `1px solid ${activa ? UAGRM_TOKENS.colors.primaryDark : UAGRM_TOKENS.border.subtle}`,
-                  '&:hover': {
-                    borderColor: activa ? UAGRM_TOKENS.colors.primaryDark : UAGRM_TOKENS.border.focus,
-                    backgroundColor: activa ? UAGRM_TOKENS.colors.primaryDark : UAGRM_TOKENS.colors.background.subtle,
-                  },
-                }}
-              >
-                <span>{tab.label}</span>
-                <Box
-                  component="span"
-                  sx={{
-                    px: 0.9,
-                    py: 0.1,
-                    borderRadius: 50,
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                    backgroundColor: activa ? 'rgba(255,255,255,0.22)' : UAGRM_TOKENS.colors.status.neutral.light,
-                    color: activa ? UAGRM_TOKENS.colors.text.white : UAGRM_TOKENS.colors.slate,
-                  }}
-                >
-                  {tab.count}
-                </Box>
-              </Box>
-            );
-          })}
-        </Stack>
-
-        {/* Buscador estandarizado */}
+      {/* 3. Búsqueda y Navegación por Pestañas (Diseño Original Estandarizado) */}
+      <Box sx={{ mb: 2.5 }}>
         <SearchInput
           value={busqueda}
           onChange={setBusqueda}
           placeholder="Buscar insumos por código, descripción o categoría..."
-          countLabel={insumosFiltrados.length}
+          maxWidth={{ xs: '100%', md: 740 }}
         />
+
+        <Box sx={{ mt: 2.5 }}>
+          <FilterTabs
+            tabs={tabsCategoria}
+            activeTab={categoriaSeleccionada}
+            onTabChange={setCategoriaSeleccionada}
+          />
+        </Box>
       </Box>
 
       {/* 4. Tabla Institucional Reutilizable (<Table />) */}

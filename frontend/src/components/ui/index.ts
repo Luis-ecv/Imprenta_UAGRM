@@ -10,3 +10,4 @@ export * from './Select';
 export * from './Table';
 export * from './SearchInput';
 export * from './KpiCard';
+export * from './FilterTabs';
