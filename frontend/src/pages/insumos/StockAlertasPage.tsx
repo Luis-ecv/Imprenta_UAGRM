@@ -1,34 +1,25 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
 import IconButton from '@mui/material/IconButton';
-import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
 import TextField from '@mui/material/TextField';
-import Paper from '@mui/material/Paper';
-import Table from '@mui/material/Table';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import TableCell from '@mui/material/TableCell';
-import TableBody from '@mui/material/TableBody';
-import TableContainer from '@mui/material/TableContainer';
 import Checkbox from '@mui/material/Checkbox';
 import Tooltip from '@mui/material/Tooltip';
 import {
   RefreshCw,
   Layers,
-  CheckCircle2,
   PackagePlus,
   Sliders,
   Package,
 } from 'lucide-react';
 
 import { insumosApi } from '@/api/insumos.api';
-import { Button, Badge, Modal } from '@/components/ui';
+import { Button, Badge, Modal, Table, type Column } from '@/components/ui';
 import { UAGRM_TOKENS } from '@/theme/tokens';
 import type { InsumoResponse, MovimientoInventarioCreate } from '@/types';
 import { formatearMoneda } from '@/utils/formatters';
@@ -178,6 +169,200 @@ export function StockAlertasPage() {
     }
   };
 
+  // Columnas de la tabla reutilizable
+  const columnas: Column<InsumoResponse>[] = useMemo(
+    () => [
+      {
+        id: 'select',
+        label: (
+          <Checkbox
+            size="small"
+            checked={alertas.length > 0 && seleccionados.length === alertas.length}
+            indeterminate={seleccionados.length > 0 && seleccionados.length < alertas.length}
+            onChange={handleToggleSelectAll}
+            sx={{ color: UAGRM_TOKENS.colors.mutedSlate, '&.Mui-checked': { color: UAGRM_TOKENS.colors.primaryDark } }}
+          />
+        ),
+        width: 50,
+        render: (insumo) => (
+          <Checkbox
+            size="small"
+            checked={seleccionados.includes(insumo.id_insumo)}
+            onChange={() => handleToggleSelect(insumo.id_insumo)}
+            sx={{ color: UAGRM_TOKENS.colors.mutedSlate, '&.Mui-checked': { color: UAGRM_TOKENS.colors.primaryDark } }}
+          />
+        ),
+      },
+      {
+        id: 'insumo',
+        label: 'INSUMO',
+        render: (insumo) => (
+          <Box>
+            <Typography
+              variant="subtitle2"
+              sx={{
+                fontWeight: 800,
+                color: UAGRM_TOKENS.colors.charcoal,
+                fontSize: '0.925rem',
+                lineHeight: 1.25,
+              }}
+            >
+              {insumo.descripcion}
+            </Typography>
+            <Typography
+              variant="caption"
+              sx={{
+                color: UAGRM_TOKENS.colors.slate,
+                fontWeight: 700,
+                fontSize: '0.75rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+                display: 'block',
+                mt: 0.3,
+              }}
+            >
+              {insumo.categoria?.nombre || 'General'}
+            </Typography>
+          </Box>
+        ),
+      },
+      {
+        id: 'nivel',
+        label: 'NIVEL',
+        width: 120,
+        render: () => (
+          <Badge variant="error" dot>
+            Crítico
+          </Badge>
+        ),
+      },
+      {
+        id: 'stock_vs_minimo',
+        label: 'STOCK VS MÍNIMO',
+        width: 220,
+        render: (insumo) => {
+          const stockActual = Number(insumo.stock_actual) || 0;
+          const stockMinimo = Number(insumo.stock_minimo) || 0;
+          const porcentaje = stockMinimo > 0 ? Math.min(100, Math.round((stockActual / stockMinimo) * 100)) : 0;
+          return (
+            <Box sx={{ width: '100%', maxWidth: 220 }}>
+              <Box
+                sx={{
+                  width: '100%',
+                  height: 8,
+                  borderRadius: 4,
+                  backgroundColor: UAGRM_TOKENS.border.subtle,
+                  overflow: 'hidden',
+                  mb: 0.7,
+                }}
+              >
+                <Box
+                  sx={{
+                    width: `${porcentaje}%`,
+                    height: '100%',
+                    backgroundColor: UAGRM_TOKENS.colors.ruby,
+                    borderRadius: 4,
+                    transition: 'width 0.4s ease',
+                  }}
+                />
+              </Box>
+
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="caption" sx={{ color: UAGRM_TOKENS.colors.slate, fontWeight: 600, fontSize: '0.78rem' }}>
+                  {stockActual} de {stockMinimo} {insumo.unidad_medida}
+                </Typography>
+                <Typography variant="caption" sx={{ color: UAGRM_TOKENS.colors.slate, fontWeight: 700, fontSize: '0.78rem' }}>
+                  {porcentaje}%
+                </Typography>
+              </Box>
+            </Box>
+          );
+        },
+      },
+      {
+        id: 'deficit',
+        label: 'DÉFICIT',
+        width: 130,
+        render: (insumo) => {
+          const deficit = Math.max(0, (Number(insumo.stock_minimo) || 0) - (Number(insumo.stock_actual) || 0));
+          return (
+            <Typography
+              variant="body2"
+              sx={{
+                color: UAGRM_TOKENS.colors.ruby,
+                fontWeight: 800,
+                fontSize: '0.925rem',
+              }}
+            >
+              -{deficit} {insumo.unidad_medida}
+            </Typography>
+          );
+        },
+      },
+      {
+        id: 'costo_reposicion',
+        label: 'COSTO REPOSICIÓN',
+        width: 150,
+        render: (insumo) => {
+          const deficit = Math.max(0, (Number(insumo.stock_minimo) || 0) - (Number(insumo.stock_actual) || 0));
+          const costoTotal = deficit * (Number(insumo.costo_reposicion) || 0);
+          return (
+            <Typography
+              variant="body2"
+              sx={{
+                color: UAGRM_TOKENS.colors.charcoal,
+                fontWeight: 700,
+                fontSize: '0.9rem',
+              }}
+            >
+              {formatearMoneda(costoTotal)}
+            </Typography>
+          );
+        },
+      },
+      {
+        id: 'acciones',
+        label: 'ACCIÓN',
+        align: 'right',
+        width: 180,
+        render: (insumo) => (
+          <Stack direction="row" spacing={1.2} sx={{ justifyContent: 'flex-end', alignItems: 'center' }}>
+            <Tooltip title="Ajustar Umbrales y Costos">
+              <IconButton
+                size="small"
+                onClick={() => abrirModalAjuste(insumo)}
+                sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 2,
+                  border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
+                  color: UAGRM_TOKENS.colors.slate,
+                  backgroundColor: UAGRM_TOKENS.colors.background.paper,
+                  '&:hover': {
+                    backgroundColor: UAGRM_TOKENS.colors.background.subtle,
+                    color: UAGRM_TOKENS.colors.primaryDark,
+                  },
+                }}
+              >
+                <Sliders size={16} />
+              </IconButton>
+            </Tooltip>
+
+            <Button
+              variant="default"
+              size="small"
+              onClick={() => abrirModalReabastecer(insumo)}
+              icon={<Package size={15} />}
+            >
+              Reabastecer
+            </Button>
+          </Stack>
+        ),
+      },
+    ],
+    [alertas, seleccionados]
+  );
+
   return (
     <Box sx={{ p: { xs: 2, sm: 3, md: 3.5 }, backgroundColor: UAGRM_TOKENS.background.default, minHeight: '100%' }}>
       {/* 1. Encabezado */}
@@ -254,59 +439,18 @@ export function StockAlertasPage() {
         </Alert>
       )}
 
-      {/* 2. Contenedor de la Tabla o Estado Óptimo */}
-      {cargando ? (
-        <Box
-          sx={{
-            p: 8,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 2,
-            backgroundColor: UAGRM_TOKENS.colors.background.paper,
-            borderRadius: 3.5,
-            border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
-          }}
-        >
-          <CircularProgress size={36} sx={{ color: UAGRM_TOKENS.colors.royalBlue }} />
-          <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate, fontWeight: 600 }}>
-            Consultando niveles de stock en tiempo real...
-          </Typography>
-        </Box>
-      ) : alertas.length === 0 ? (
-        <Paper
-          elevation={0}
-          sx={{
-            py: 8,
-            px: 3,
-            textAlign: 'center',
-            borderRadius: 3.5,
-            border: `1px dashed ${UAGRM_TOKENS.border.focus}`,
-            backgroundColor: UAGRM_TOKENS.colors.background.paper,
-          }}
-        >
-          <Box
-            sx={{
-              width: 56,
-              height: 56,
-              borderRadius: '50%',
-              backgroundColor: UAGRM_TOKENS.colors.status.success.light,
-              color: UAGRM_TOKENS.colors.status.success.dark,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              mx: 'auto',
-              mb: 2,
-            }}
-          >
-            <CheckCircle2 size={32} />
-          </Box>
-          <Typography variant="h6" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.primaryDark, mb: 0.5 }}>
-            Inventario en Nivel Óptimo
-          </Typography>
-          <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate, maxWidth: 460, mx: 'auto', mb: 3 }}>
-            Todos los insumos del taller se encuentran actualmente por encima de su umbral mínimo de seguridad.
-          </Typography>
+      {/* 2. Tabla Institucional Reutilizable (<Table />) */}
+      <Table<InsumoResponse>
+        columns={columnas}
+        data={alertas}
+        keyExtractor={(item) => item.id_insumo}
+        isLoading={cargando}
+        emptyMessage="Inventario en Nivel Óptimo: Todos los insumos del taller se encuentran actualmente por encima de su umbral mínimo de seguridad."
+      />
+
+      {/* Footer informativo */}
+      {alertas.length === 0 && !cargando && (
+        <Box sx={{ mt: 2.5, textAlign: 'center' }}>
           <Button
             component={Link}
             to="/insumos"
@@ -315,223 +459,6 @@ export function StockAlertasPage() {
           >
             Ver Catálogo de Insumos
           </Button>
-        </Paper>
-      ) : (
-        <Box>
-          <TableContainer
-            component={Paper}
-            elevation={0}
-            sx={{
-              borderRadius: 3.5,
-              border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
-              backgroundColor: UAGRM_TOKENS.colors.background.paper,
-              overflow: 'hidden',
-              boxShadow: UAGRM_TOKENS.shadows.card,
-            }}
-          >
-            <Table sx={{ minWidth: 850 }}>
-              <TableHead sx={{ backgroundColor: UAGRM_TOKENS.colors.table.headerBg }}>
-                <TableRow sx={{ '& th': { borderBottom: `1px solid ${UAGRM_TOKENS.border.subtle}`, py: 2 } }}>
-                  <TableCell padding="checkbox" sx={{ pl: 2.5 }}>
-                    <Checkbox
-                      size="small"
-                      checked={alertas.length > 0 && seleccionados.length === alertas.length}
-                      indeterminate={seleccionados.length > 0 && seleccionados.length < alertas.length}
-                      onChange={handleToggleSelectAll}
-                      sx={{ color: UAGRM_TOKENS.colors.mutedSlate, '&.Mui-checked': { color: UAGRM_TOKENS.colors.primaryDark } }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Insumo
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Nivel
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em', minWidth: 220 }}>
-                    Stock vs Mínimo
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Déficit
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Costo Reposición
-                  </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em', pr: 3 }}>
-                    Acción
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {alertas.map((insumo) => {
-                  const stockActual = Number(insumo.stock_actual) || 0;
-                  const stockMinimo = Number(insumo.stock_minimo) || 0;
-                  const deficit = Math.max(0, stockMinimo - stockActual);
-                  const costoUnitario = Number(insumo.costo_reposicion) || 0;
-                  const costoTotal = deficit * costoUnitario;
-                  const porcentaje = stockMinimo > 0 ? Math.min(100, Math.round((stockActual / stockMinimo) * 100)) : 0;
-                  const isChecked = seleccionados.includes(insumo.id_insumo);
-
-                  return (
-                    <TableRow
-                      key={insumo.id_insumo}
-                      hover
-                      sx={{
-                        '&:hover': { backgroundColor: UAGRM_TOKENS.colors.table.rowHover },
-                        '& td': { borderBottom: `1px solid ${UAGRM_TOKENS.border.subtle}`, py: 2 },
-                        '&:last-child td': { borderBottom: 0 },
-                      }}
-                    >
-                      {/* Checkbox */}
-                      <TableCell padding="checkbox" sx={{ pl: 2.5 }}>
-                        <Checkbox
-                          size="small"
-                          checked={isChecked}
-                          onChange={() => handleToggleSelect(insumo.id_insumo)}
-                          sx={{ color: UAGRM_TOKENS.colors.mutedSlate, '&.Mui-checked': { color: UAGRM_TOKENS.colors.primaryDark } }}
-                        />
-                      </TableCell>
-
-                      {/* Insumo */}
-                      <TableCell>
-                        <Box>
-                          <Typography
-                            variant="subtitle2"
-                            sx={{
-                              fontWeight: 800,
-                              color: UAGRM_TOKENS.colors.charcoal,
-                              fontSize: '0.925rem',
-                              lineHeight: 1.25,
-                            }}
-                          >
-                            {insumo.descripcion}
-                          </Typography>
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              color: UAGRM_TOKENS.colors.slate,
-                              fontWeight: 700,
-                              fontSize: '0.75rem',
-                              textTransform: 'uppercase',
-                              letterSpacing: '0.04em',
-                              display: 'block',
-                              mt: 0.3,
-                            }}
-                          >
-                            {insumo.categoria?.nombre || 'General'}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-
-                      {/* Nivel (Badge centralizado) */}
-                      <TableCell>
-                        <Badge variant="error" dot>
-                          Crítico
-                        </Badge>
-                      </TableCell>
-
-                      {/* Stock vs mínimo */}
-                      <TableCell>
-                        <Box sx={{ width: '100%', maxWidth: 220 }}>
-                          <Box
-                            sx={{
-                              width: '100%',
-                              height: 8,
-                              borderRadius: 4,
-                              backgroundColor: UAGRM_TOKENS.border.subtle,
-                              overflow: 'hidden',
-                              mb: 0.7,
-                            }}
-                          >
-                            <Box
-                              sx={{
-                                width: `${porcentaje}%`,
-                                height: '100%',
-                                backgroundColor: UAGRM_TOKENS.colors.ruby,
-                                borderRadius: 4,
-                                transition: 'width 0.4s ease',
-                              }}
-                            />
-                          </Box>
-
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Typography variant="caption" sx={{ color: UAGRM_TOKENS.colors.slate, fontWeight: 600, fontSize: '0.78rem' }}>
-                              {stockActual} de {stockMinimo} {insumo.unidad_medida}
-                            </Typography>
-                            <Typography variant="caption" sx={{ color: UAGRM_TOKENS.colors.slate, fontWeight: 700, fontSize: '0.78rem' }}>
-                              {porcentaje}%
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </TableCell>
-
-                      {/* Déficit */}
-                      <TableCell>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            color: UAGRM_TOKENS.colors.ruby,
-                            fontWeight: 800,
-                            fontSize: '0.925rem',
-                          }}
-                        >
-                          -{deficit} {insumo.unidad_medida}
-                        </Typography>
-                      </TableCell>
-
-                      {/* Costo reposición */}
-                      <TableCell>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            color: UAGRM_TOKENS.colors.charcoal,
-                            fontWeight: 700,
-                            fontSize: '0.9rem',
-                          }}
-                        >
-                          {formatearMoneda(costoTotal)}
-                        </Typography>
-                      </TableCell>
-
-                      {/* Acción */}
-                      <TableCell align="right" sx={{ pr: 3 }}>
-                        <Stack direction="row" spacing={1.2} sx={{ justifyContent: 'flex-end', alignItems: 'center' }}>
-                          <Tooltip title="Ajustar Umbrales y Costos">
-                            <IconButton
-                              size="small"
-                              onClick={() => abrirModalAjuste(insumo)}
-                              sx={{
-                                width: 36,
-                                height: 36,
-                                borderRadius: 2,
-                                border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
-                                color: UAGRM_TOKENS.colors.slate,
-                                backgroundColor: UAGRM_TOKENS.colors.background.paper,
-                                '&:hover': {
-                                  backgroundColor: UAGRM_TOKENS.colors.background.subtle,
-                                  color: UAGRM_TOKENS.colors.primaryDark,
-                                },
-                              }}
-                            >
-                              <Sliders size={16} />
-                            </IconButton>
-                          </Tooltip>
-
-                          <Button
-                            variant="default"
-                            size="small"
-                            onClick={() => abrirModalReabastecer(insumo)}
-                            icon={<Package size={15} />}
-                          >
-                            Reabastecer
-                          </Button>
-                        </Stack>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
         </Box>
       )}
 

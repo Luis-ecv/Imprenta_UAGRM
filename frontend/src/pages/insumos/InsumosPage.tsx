@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -6,14 +6,6 @@ import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
-import CircularProgress from '@mui/material/CircularProgress';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Paper from '@mui/material/Paper';
 import Alert from '@mui/material/Alert';
 import {
   Layers,
@@ -27,7 +19,7 @@ import {
 } from 'lucide-react';
 
 import { useInsumos } from '@/hooks/useInsumos';
-import { Button, KpiCard, SearchInput, Badge } from '@/components/ui';
+import { Button, KpiCard, SearchInput, Badge, Table, type Column } from '@/components/ui';
 import { UAGRM_TOKENS } from '@/theme/tokens';
 import type { InsumoResponse } from '@/types';
 import { formatearMoneda } from '@/utils/formatters';
@@ -77,6 +69,143 @@ export function InsumosPage() {
     setInsumoEditando(insumo);
     setModalInsumoAbierto(true);
   };
+
+  // Definición centralizada de columnas para el componente <Table />
+  const columnas: Column<InsumoResponse>[] = useMemo(
+    () => [
+      {
+        id: 'codigo',
+        label: 'CÓDIGO',
+        width: 140,
+        render: (item) => (
+          <Typography sx={{ fontWeight: 780, color: UAGRM_TOKENS.colors.primaryDark, fontSize: '0.88rem' }}>
+            {item.codigo}
+          </Typography>
+        ),
+      },
+      {
+        id: 'descripcion',
+        label: 'DESCRIPCIÓN / ESPECIFICACIONES',
+        render: (item) => (
+          <Typography sx={{ fontWeight: 600, color: UAGRM_TOKENS.colors.charcoal, fontSize: '0.88rem' }}>
+            {item.descripcion}
+          </Typography>
+        ),
+      },
+      {
+        id: 'categoria',
+        label: 'CATEGORÍA',
+        width: 180,
+        render: (item) => (
+          <Badge variant="info">
+            {item.categoria?.nombre || 'General'}
+          </Badge>
+        ),
+      },
+      {
+        id: 'stock_actual',
+        label: 'STOCK ACTUAL',
+        align: 'right',
+        width: 140,
+        render: (item) => (
+          <Typography sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.primaryDark, fontSize: '0.9rem' }}>
+            {Number(item.stock_actual).toLocaleString()} {item.unidad_medida}
+          </Typography>
+        ),
+      },
+      {
+        id: 'stock_minimo',
+        label: 'STOCK MÍN.',
+        align: 'right',
+        width: 130,
+        render: (item) => (
+          <Typography sx={{ color: UAGRM_TOKENS.colors.slate, fontWeight: 600, fontSize: '0.85rem' }}>
+            {Number(item.stock_minimo).toLocaleString()} {item.unidad_medida}
+          </Typography>
+        ),
+      },
+      {
+        id: 'costo_reposicion',
+        label: 'COSTO REPOSICIÓN',
+        align: 'right',
+        width: 150,
+        render: (item) => (
+          <Typography sx={{ color: UAGRM_TOKENS.colors.primaryDark, fontWeight: 750, fontSize: '0.88rem' }}>
+            {formatearMoneda(item.costo_reposicion)}
+          </Typography>
+        ),
+      },
+      {
+        id: 'estado',
+        label: 'ESTADO',
+        align: 'center',
+        width: 120,
+        render: (item) => {
+          const stock = Number(item.stock_actual);
+          const min = Number(item.stock_minimo);
+          const esCritico = stock <= min;
+          const esAlerta = !esCritico && stock <= min * 1.5;
+          return (
+            <Badge variant={esCritico ? 'error' : esAlerta ? 'warning' : 'success'}>
+              {esCritico ? 'Crítico' : esAlerta ? 'Alerta' : 'Normal'}
+            </Badge>
+          );
+        },
+      },
+      {
+        id: 'acciones',
+        label: 'ACCIONES',
+        align: 'right',
+        width: 110,
+        render: (item) => (
+          <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
+            <Tooltip title="Registrar movimiento (Ingreso / Ajuste / Merma)">
+              <IconButton
+                size="small"
+                onClick={() => setInsumoParaMovimiento(item)}
+                sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 2,
+                  border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
+                  backgroundColor: UAGRM_TOKENS.colors.background.paper,
+                  color: UAGRM_TOKENS.colors.charcoal,
+                  '&:hover': {
+                    backgroundColor: UAGRM_TOKENS.colors.background.subtle,
+                    color: UAGRM_TOKENS.colors.primaryDark,
+                  },
+                }}
+              >
+                <PackagePlus size={16} />
+              </IconButton>
+            </Tooltip>
+
+            <Tooltip title="Editar insumo">
+              <IconButton
+                size="small"
+                onClick={() => abrirModalEditar(item)}
+                sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 2,
+                  border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
+                  backgroundColor: UAGRM_TOKENS.colors.background.paper,
+                  color: UAGRM_TOKENS.colors.charcoal,
+                  '&:hover': {
+                    backgroundColor: UAGRM_TOKENS.colors.background.subtle,
+                    color: UAGRM_TOKENS.colors.primaryDark,
+                  },
+                }}
+              >
+                <Edit2 size={16} />
+              </IconButton>
+            </Tooltip>
+          </Stack>
+        ),
+      },
+    ],
+    []
+  );
 
   return (
     <Box sx={{ p: { xs: 2, sm: 3, md: 3.5 }, backgroundColor: UAGRM_TOKENS.background.default, minHeight: '100%' }}>
@@ -272,203 +401,18 @@ export function InsumosPage() {
         />
       </Box>
 
-      {/* 4. Tabla de Insumos */}
-      {cargando ? (
-        <Paper
-          elevation={0}
-          sx={{
-            p: 6,
-            textAlign: 'center',
-            borderRadius: 3,
-            border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
-            backgroundColor: UAGRM_TOKENS.colors.background.paper,
-          }}
-        >
-          <CircularProgress size={36} sx={{ color: UAGRM_TOKENS.colors.royalBlue, mb: 2 }} />
-          <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate, fontWeight: 600 }}>
-            Cargando catálogo de almacén...
-          </Typography>
-        </Paper>
-      ) : insumosFiltrados.length === 0 ? (
-        <Paper
-          elevation={0}
-          sx={{
-            p: 6,
-            textAlign: 'center',
-            borderRadius: 3,
-            border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
-            backgroundColor: UAGRM_TOKENS.colors.background.paper,
-          }}
-        >
-          <Typography variant="h6" sx={{ fontWeight: 700, color: UAGRM_TOKENS.colors.charcoal, mb: 1 }}>
-            No se encontraron insumos
-          </Typography>
-          <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate }}>
-            {busqueda
-              ? 'No hay registros que coincidan con los criterios de búsqueda.'
-              : 'El catálogo está vacío. Comience agregando un nuevo insumo.'}
-          </Typography>
-        </Paper>
-      ) : (
-        <TableContainer
-          component={Paper}
-          elevation={0}
-          sx={{
-            borderRadius: 3,
-            border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
-            backgroundColor: UAGRM_TOKENS.colors.background.paper,
-            overflow: 'hidden',
-          }}
-        >
-          <Table sx={{ minWidth: 850 }}>
-            <TableHead>
-              <TableRow sx={{ backgroundColor: UAGRM_TOKENS.colors.table.headerBg, borderBottom: `1px solid ${UAGRM_TOKENS.border.subtle}` }}>
-                <TableCell sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', py: 1.8, pl: 3 }}>
-                  CÓDIGO
-                </TableCell>
-                <TableCell sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', py: 1.8 }}>
-                  DESCRIPCIÓN / ESPECIFICACIONES
-                </TableCell>
-                <TableCell sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', py: 1.8 }}>
-                  CATEGORÍA
-                </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', py: 1.8 }}>
-                  STOCK ACTUAL
-                </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', py: 1.8 }}>
-                  STOCK MÍN.
-                </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', py: 1.8 }}>
-                  COSTO REPOSICIÓN
-                </TableCell>
-                <TableCell align="center" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', py: 1.8 }}>
-                  ESTADO
-                </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.table.headerText, fontSize: '0.78rem', py: 1.8, pr: 3 }}>
-                  ACCIONES
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {insumosFiltrados.map((item) => {
-                const stockActual = Number(item.stock_actual);
-                const stockMinimo = Number(item.stock_minimo);
-                const esCritico = stockActual <= stockMinimo;
-                const esAlerta = !esCritico && stockActual <= stockMinimo * 1.5;
-
-                return (
-                  <TableRow
-                    key={item.id_insumo}
-                    hover
-                    sx={{
-                      '&:last-child td, &:last-child th': { border: 0 },
-                      borderBottom: `1px solid ${UAGRM_TOKENS.border.subtle}`,
-                      transition: 'background-color 0.15s ease',
-                      '&:hover': { backgroundColor: UAGRM_TOKENS.colors.table.rowHover },
-                    }}
-                  >
-                    {/* Código */}
-                    <TableCell sx={{ pl: 3 }}>
-                      <Typography sx={{ fontWeight: 780, color: UAGRM_TOKENS.colors.primaryDark, fontSize: '0.88rem' }}>
-                        {item.codigo}
-                      </Typography>
-                    </TableCell>
-
-                    {/* Descripción */}
-                    <TableCell>
-                      <Typography sx={{ fontWeight: 600, color: UAGRM_TOKENS.colors.charcoal, fontSize: '0.88rem' }}>
-                        {item.descripcion}
-                      </Typography>
-                    </TableCell>
-
-                    {/* Categoría (Badge centralizado) */}
-                    <TableCell>
-                      <Badge variant="info">
-                        {item.categoria?.nombre || 'General'}
-                      </Badge>
-                    </TableCell>
-
-                    {/* Stock Actual */}
-                    <TableCell align="right">
-                      <Typography sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.primaryDark, fontSize: '0.9rem' }}>
-                        {stockActual.toLocaleString()} {item.unidad_medida}
-                      </Typography>
-                    </TableCell>
-
-                    {/* Stock Mínimo */}
-                    <TableCell align="right">
-                      <Typography sx={{ color: UAGRM_TOKENS.colors.slate, fontWeight: 600, fontSize: '0.85rem' }}>
-                        {stockMinimo.toLocaleString()} {item.unidad_medida}
-                      </Typography>
-                    </TableCell>
-
-                    {/* Costo Reposición */}
-                    <TableCell align="right">
-                      <Typography sx={{ color: UAGRM_TOKENS.colors.primaryDark, fontWeight: 750, fontSize: '0.88rem' }}>
-                        {formatearMoneda(item.costo_reposicion)}
-                      </Typography>
-                    </TableCell>
-
-                    {/* Estado (Badge centralizado) */}
-                    <TableCell align="center">
-                      <Badge variant={esCritico ? 'error' : esAlerta ? 'warning' : 'success'}>
-                        {esCritico ? 'Crítico' : esAlerta ? 'Alerta' : 'Normal'}
-                      </Badge>
-                    </TableCell>
-
-                    {/* Acciones */}
-                    <TableCell align="right" sx={{ pr: 3 }}>
-                      <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
-                        <Tooltip title="Registrar movimiento (Ingreso / Ajuste / Merma)">
-                          <IconButton
-                            size="small"
-                            onClick={() => setInsumoParaMovimiento(item)}
-                            sx={{
-                              width: 36,
-                              height: 36,
-                              borderRadius: 2,
-                              border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
-                              backgroundColor: UAGRM_TOKENS.colors.background.paper,
-                              color: UAGRM_TOKENS.colors.charcoal,
-                              '&:hover': {
-                                backgroundColor: UAGRM_TOKENS.colors.background.subtle,
-                                color: UAGRM_TOKENS.colors.primaryDark,
-                              },
-                            }}
-                          >
-                            <PackagePlus size={16} />
-                          </IconButton>
-                        </Tooltip>
-
-                        <Tooltip title="Editar insumo">
-                          <IconButton
-                            size="small"
-                            onClick={() => abrirModalEditar(item)}
-                            sx={{
-                              width: 36,
-                              height: 36,
-                              borderRadius: 2,
-                              border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
-                              backgroundColor: UAGRM_TOKENS.colors.background.paper,
-                              color: UAGRM_TOKENS.colors.charcoal,
-                              '&:hover': {
-                                backgroundColor: UAGRM_TOKENS.colors.background.subtle,
-                                color: UAGRM_TOKENS.colors.primaryDark,
-                              },
-                            }}
-                          >
-                            <Edit2 size={16} />
-                          </IconButton>
-                        </Tooltip>
-                      </Stack>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
+      {/* 4. Tabla Institucional Reutilizable (<Table />) */}
+      <Table<InsumoResponse>
+        columns={columnas}
+        data={insumosFiltrados}
+        keyExtractor={(item) => item.id_insumo}
+        isLoading={cargando}
+        emptyMessage={
+          busqueda
+            ? 'No hay registros que coincidan con los criterios de búsqueda.'
+            : 'El catálogo está vacío. Comience agregando un nuevo insumo.'
+        }
+      />
 
       {/* Modales modulares desacoplados (construidos sobre el componente <Modal /> centralizado) */}
       <MovimientoModal
