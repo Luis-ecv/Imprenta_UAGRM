@@ -2,24 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
 import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Paper from '@mui/material/Paper';
 import {
   ArrowLeft,
   Check,
@@ -34,6 +21,8 @@ import {
 } from 'lucide-react';
 
 import { comprasApi } from '@/api/compras.api';
+import { Button, Badge, Modal } from '@/components/ui';
+import { UAGRM_TOKENS } from '@/theme/tokens';
 import type { OrdenCompraResponse } from '@/types';
 import { formatearMoneda, formatearFecha } from '@/utils/formatters';
 
@@ -51,10 +40,7 @@ export function CompraDetallePage() {
   const [error, setError] = useState<string | null>(null);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
 
-  // Pestañas inferiores: Resumen | Qué se compra | Avance
   const [tabActiva, setTabActiva] = useState<'resumen' | 'detalle' | 'avance'>('resumen');
-
-  // Modales de Acción
   const [modalCancelarAbierto, setModalCancelarAbierto] = useState<boolean>(false);
   const [procesando, setProcesando] = useState<boolean>(false);
 
@@ -108,8 +94,8 @@ export function CompraDetallePage() {
   if (cargando) {
     return (
       <Box sx={{ p: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-        <CircularProgress size={36} sx={{ color: '#1e2b4d' }} />
-        <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 600 }}>
+        <CircularProgress size={36} sx={{ color: UAGRM_TOKENS.colors.primaryDark }} />
+        <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate, fontWeight: 600 }}>
           Cargando orden de compra...
         </Typography>
       </Box>
@@ -125,9 +111,8 @@ export function CompraDetallePage() {
         <Button
           component={Link}
           to="/compras"
-          startIcon={<ArrowLeft size={16} />}
-          variant="outlined"
-          sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 50 }}
+          icon={<ArrowLeft size={16} />}
+          variant="outline"
         >
           Volver a órdenes de compra
         </Button>
@@ -139,7 +124,6 @@ export function CompraDetallePage() {
   const proveedor = compra.proveedor;
   const esCancelada = estadoActual === 'CANCELADA';
 
-  // Índice del paso actual (1..4)
   const indicePasoActual =
     estadoActual === 'RECIBIDA'
       ? 4
@@ -149,99 +133,58 @@ export function CompraDetallePage() {
       ? 2
       : 1;
 
-  // Datos de la insignia de estado superior derecha
-  const getBadgeEstadoInfo = () => {
-    switch (estadoActual) {
+  const getBadgeVariant = (st: string) => {
+    switch (st) {
       case 'RECIBIDA':
-        return {
-          label: 'Recibida en almacén',
-          bg: '#ecfdf5',
-          border: '#a7f3d0',
-          color: '#065f46',
-        };
+        return 'success';
       case 'ENVIADA':
-        return {
-          label: 'Enviada al proveedor',
-          bg: '#eff6ff',
-          border: '#bfdbfe',
-          color: '#1d4ed8',
-        };
+        return 'primary';
       case 'APROBADA':
-        return {
-          label: 'Aprobada por taller',
-          bg: '#f0fdf4',
-          border: '#bbf7d0',
-          color: '#15803d',
-        };
+        return 'info';
       case 'CANCELADA':
-        return {
-          label: 'Orden cancelada',
-          bg: '#fef2f2',
-          border: '#fecaca',
-          color: '#991b1b',
-        };
+        return 'error';
       default:
-        return {
-          label: 'Pendiente de aprobación',
-          bg: '#fffbeb',
-          border: '#fde68a',
-          color: '#b45309',
-        };
+        return 'warning';
     }
   };
 
-  const badgeInfo = getBadgeEstadoInfo();
-
   return (
     <Box sx={{ p: { xs: 2, sm: 3, md: 3.5 }, maxWidth: 1240, mx: 'auto' }}>
-      {/* 1. Botón superior de retorno */}
-      {/* <Box sx={{ mb: 2.5 }}>
-        <Button
-          component={Link}
-          to="/compras"
-          startIcon={<ArrowLeft size={16} />}
-          sx={{
-            textTransform: 'none',
-            fontWeight: 700,
-            color: '#475569',
-            fontSize: '0.88rem',
-            p: 0,
-            '&:hover': { color: '#000000', backgroundColor: 'transparent' },
-          }}
-        >
-          Volver a órdenes de compra
-        </Button>
-      </Box> */}
+      <Button
+        variant="ghost"
+        component={Link}
+        to="/compras"
+        icon={<ArrowLeft size={16} />}
+        style={{ marginBottom: 16 }}
+      >
+        Volver a órdenes de compra
+      </Button>
 
-      {/* 2. Mensaje de Éxito / Feedback */}
       {mensajeExito && (
         <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setMensajeExito(null)}>
           {mensajeExito}
         </Alert>
       )}
 
-      {/* 3. Cuadrícula Principal: 2 Columnas (Diseño idéntico a la imagen) */}
       <Grid container spacing={3}>
-        {/* =========================================================
-            COLUMNA IZQUIERDA: Detalle Técnico, Stepper y Pestañas
-            ========================================================= */}
+        {/* Columna Izquierda: Detalle Técnico y Stepper */}
         <Grid size={{ xs: 12, md: 7.5, lg: 8 }}>
           <Stack spacing={3}>
-            {/* Tarjeta 1: Encabezado con Stepper de 4 Pasos */}
+            {/* Tarjeta 1: Stepper de 4 Pasos */}
             <Card
               elevation={0}
               sx={{
-                borderRadius: 4,
-                border: '1px solid #e8e4dc',
-                backgroundColor: '#ffffff',
+                borderRadius: `${UAGRM_TOKENS.radii.xl}px`,
+                border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
+                backgroundColor: UAGRM_TOKENS.colors.background.paper,
                 p: { xs: 2.5, sm: 3.5 },
-                boxShadow: '0 2px 12px rgba(0,0,0,0.02)',
+                boxShadow: UAGRM_TOKENS.shadows.card,
               }}
             >
               <Typography
                 variant="caption"
                 sx={{
-                  color: '#64748b',
+                  color: UAGRM_TOKENS.colors.slate,
                   fontWeight: 800,
                   fontSize: '0.75rem',
                   letterSpacing: '0.06em',
@@ -250,29 +193,28 @@ export function CompraDetallePage() {
                   mb: 0.5,
                 }}
               >
-                ORDEN DE COMPRA
+                ORDEN DE COMPRA LITOGRÁFICA
               </Typography>
 
               <Typography
                 variant="h4"
                 sx={{
                   fontWeight: 900,
-                  color: '#000000',
+                  color: UAGRM_TOKENS.colors.charcoal,
                   letterSpacing: '-0.02em',
                   mb: 1,
                   fontSize: { xs: '1.8rem', sm: '2.2rem' },
                 }}
               >
-                #OC-{compra.id_orden_compra}
+                {`#OC-${String(compra.id_orden_compra).padStart(4, '0')}`}
               </Typography>
 
-              <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.90rem', mb: 3.5 }}>
+              <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate, fontSize: '0.90rem', mb: 3.5 }}>
                 Registrada el {formatearFecha(compra.fecha_generacion)} para abastecer el taller litográfico.
               </Typography>
 
-              {/* Stepper Horizontal Limpio */}
+              {/* Stepper Horizontal */}
               <Box sx={{ position: 'relative', px: { xs: 1, sm: 2 } }}>
-                {/* Línea conectora horizontal de fondo */}
                 <Box
                   sx={{
                     position: 'absolute',
@@ -280,7 +222,7 @@ export function CompraDetallePage() {
                     left: '12%',
                     right: '12%',
                     height: 2,
-                    backgroundColor: '#e2e8f0',
+                    backgroundColor: UAGRM_TOKENS.border.subtle,
                     zIndex: 0,
                   }}
                 />
@@ -308,7 +250,6 @@ export function CompraDetallePage() {
                           gap: 1,
                         }}
                       >
-                        {/* Círculo del número / Check */}
                         <Box
                           sx={{
                             width: 32,
@@ -320,24 +261,23 @@ export function CompraDetallePage() {
                             fontWeight: 800,
                             fontSize: '0.85rem',
                             backgroundColor: esActivo
-                              ? '#000000'
+                              ? UAGRM_TOKENS.colors.charcoal
                               : esCompletado
-                              ? '#0f172a'
-                              : '#ffffff',
-                            color: esActivo || esCompletado ? '#ffffff' : '#94a3b8',
-                            border: esActivo || esCompletado ? 'none' : '2px solid #e2e8f0',
+                              ? UAGRM_TOKENS.colors.primaryDark
+                              : UAGRM_TOKENS.colors.background.paper,
+                            color: esActivo || esCompletado ? '#ffffff' : UAGRM_TOKENS.colors.slate,
+                            border: esActivo || esCompletado ? 'none' : `2px solid ${UAGRM_TOKENS.border.subtle}`,
                             transition: 'all 0.2s ease',
                           }}
                         >
                           {esCompletado ? <Check size={16} strokeWidth={3} /> : paso.numero}
                         </Box>
 
-                        {/* Etiqueta del Paso */}
                         <Typography
                           variant="caption"
                           sx={{
                             fontWeight: esActivo ? 800 : 600,
-                            color: esActivo ? '#000000' : '#64748b',
+                            color: esActivo ? UAGRM_TOKENS.colors.charcoal : UAGRM_TOKENS.colors.slate,
                             fontSize: '0.82rem',
                           }}
                         >
@@ -350,25 +290,24 @@ export function CompraDetallePage() {
               </Box>
             </Card>
 
-            {/* Tarjeta 2: Pestañas de Detalle (Resumen | Qué se compra | Avance) */}
+            {/* Tarjeta 2: Pestañas de Detalle */}
             <Card
               elevation={0}
               sx={{
-                borderRadius: 4,
-                border: '1px solid #e8e4dc',
-                backgroundColor: '#ffffff',
+                borderRadius: `${UAGRM_TOKENS.radii.xl}px`,
+                border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
+                backgroundColor: UAGRM_TOKENS.colors.background.paper,
                 p: { xs: 2.5, sm: 3.5 },
-                boxShadow: '0 2px 12px rgba(0,0,0,0.02)',
+                boxShadow: UAGRM_TOKENS.shadows.card,
               }}
             >
-              {/* Navegación por Pestañas con Subrayado Negro (Estándar UAGRM) */}
+              {/* Pestañas con Subrayado Oficial */}
               <Box
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: 3.5,
-                  borderBottom: '1px solid #e8e4dc',
-                  pb: 0,
+                  borderBottom: `1px solid ${UAGRM_TOKENS.border.subtle}`,
                   mb: 3,
                 }}
               >
@@ -393,9 +332,9 @@ export function CompraDetallePage() {
                         fontFamily: 'inherit',
                         fontSize: '0.95rem',
                         fontWeight: isActive ? 800 : 500,
-                        color: isActive ? '#000000' : '#64748b',
+                        color: isActive ? UAGRM_TOKENS.colors.charcoal : UAGRM_TOKENS.colors.slate,
                         transition: 'all 0.15s ease',
-                        '&:hover': { color: '#000000' },
+                        '&:hover': { color: UAGRM_TOKENS.colors.charcoal },
                         '&::after': isActive
                           ? {
                               content: '""',
@@ -404,7 +343,7 @@ export function CompraDetallePage() {
                               left: 0,
                               right: 0,
                               height: '2.5px',
-                              backgroundColor: '#000000',
+                              backgroundColor: UAGRM_TOKENS.colors.charcoal,
                               borderRadius: '2px 2px 0 0',
                             }
                           : undefined,
@@ -416,19 +355,18 @@ export function CompraDetallePage() {
                 })}
               </Box>
 
-              {/* CONTENIDO PESTAÑA: RESUMEN (Idéntico a la imagen) */}
+              {/* Tab: Resumen */}
               {tabActiva === 'resumen' && (
                 <Grid container spacing={3}>
-                  {/* Sub-bloque Proveedor */}
                   <Grid size={{ xs: 12, sm: 6 }}>
                     <Stack spacing={1.5}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Building size={16} color="#64748b" />
+                        <Building size={16} color={UAGRM_TOKENS.colors.slate} />
                         <Typography
                           variant="caption"
                           sx={{
                             fontWeight: 800,
-                            color: '#64748b',
+                            color: UAGRM_TOKENS.colors.slate,
                             textTransform: 'uppercase',
                             letterSpacing: '0.04em',
                           }}
@@ -438,45 +376,43 @@ export function CompraDetallePage() {
                       </Box>
 
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 0.5 }}>
-                        {/* Avatar Iniciales P1/P2 */}
                         <Box
                           sx={{
                             width: 44,
                             height: 44,
                             borderRadius: '12px',
-                            backgroundColor: '#f1f5f9',
+                            backgroundColor: UAGRM_TOKENS.colors.background.subtle,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontWeight: 800,
                             fontSize: '0.95rem',
-                            color: '#1e293b',
+                            color: UAGRM_TOKENS.colors.primaryDark,
                             flexShrink: 0,
                           }}
                         >
                           P{compra.proveedor_id}
                         </Box>
                         <Box>
-                          <Typography variant="body1" sx={{ fontWeight: 800, color: '#000000', lineHeight: 1.2 }}>
+                          <Typography variant="body1" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.charcoal, lineHeight: 1.2 }}>
                             {proveedor?.razon_social || `Proveedor #${compra.proveedor_id}`}
                           </Typography>
-                          <Typography variant="caption" sx={{ color: '#64748b' }}>
+                          <Typography variant="caption" sx={{ color: UAGRM_TOKENS.colors.slate }}>
                             Proveedor autorizado {proveedor?.nit ? `• NIT: ${proveedor.nit}` : ''}
                           </Typography>
                         </Box>
                       </Box>
 
-                      {/* Cuadro de Contacto o "Sin datos de contacto registrados" */}
                       <Box
                         sx={{
                           p: 1.4,
                           borderRadius: '10px',
-                          backgroundColor: '#f8fafc',
-                          border: '1px solid #f1f5f9',
+                          backgroundColor: UAGRM_TOKENS.colors.background.subtle,
+                          border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
                           mt: 1,
                         }}
                       >
-                        <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600 }}>
+                        <Typography variant="caption" sx={{ color: UAGRM_TOKENS.colors.slate, fontWeight: 600 }}>
                           {proveedor?.contacto
                             ? `Contacto: ${proveedor.contacto}${proveedor.telefono ? ` · Tel: ${proveedor.telefono}` : ''}`
                             : 'Sin datos de contacto registrados'}
@@ -485,71 +421,61 @@ export function CompraDetallePage() {
 
                       <Box sx={{ pt: 0.5 }}>
                         <Button
+                          variant="ghost"
                           component={Link}
                           to="/proveedores"
-                          endIcon={<ArrowRight size={14} />}
-                          sx={{
-                            p: 0,
-                            textTransform: 'none',
-                            fontWeight: 700,
-                            color: '#0284c7',
-                            fontSize: '0.85rem',
-                            '&:hover': { backgroundColor: 'transparent', textDecoration: 'underline' },
-                          }}
+                          icon={<ArrowRight size={14} />}
+                          style={{ padding: 0 }}
                         >
-                          Ver ficha del proveedor
+                          Ver padrón de proveedores
                         </Button>
                       </Box>
                     </Stack>
                   </Grid>
 
-                  {/* Sub-bloque Fechas y Entrega */}
                   <Grid size={{ xs: 12, sm: 6 }}>
                     <Stack spacing={2}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Calendar size={16} color="#64748b" />
+                        <Calendar size={16} color={UAGRM_TOKENS.colors.slate} />
                         <Typography
                           variant="caption"
                           sx={{
                             fontWeight: 800,
-                            color: '#64748b',
+                            color: UAGRM_TOKENS.colors.slate,
                             textTransform: 'uppercase',
                             letterSpacing: '0.04em',
                           }}
                         >
-                          FECHAS Y ENTREGA
+                          FECHAS Y DESTINO
                         </Typography>
                       </Box>
 
                       <Box>
-                        <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mb: 0.3 }}>
+                        <Typography variant="caption" sx={{ color: UAGRM_TOKENS.colors.slate, display: 'block', mb: 0.3 }}>
                           Fecha de emisión
                         </Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 800, color: '#000000' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.charcoal }}>
                           {formatearFecha(compra.fecha_generacion)}
                         </Typography>
                       </Box>
 
                       <Box>
-                        <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mb: 0.3 }}>
+                        <Typography variant="caption" sx={{ color: UAGRM_TOKENS.colors.slate, display: 'block', mb: 0.3 }}>
                           Motivo de la compra
                         </Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 800, color: '#000000' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.charcoal }}>
                           {compra.prediccion_id
-                            ? `Sugerido por Modelo de Machine Learning (Inferencia #ML-${compra.prediccion_id})`
-                            : 'Reposición manual de inventario'}
+                            ? `Sugerido por Modelo Predictivo (#ML-${compra.prediccion_id})`
+                            : 'Reposición preventiva de inventario litográfico'}
                         </Typography>
                       </Box>
 
                       <Box>
-                        <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mb: 0.3 }}>
-                          Entregar en
+                        <Typography variant="caption" sx={{ color: UAGRM_TOKENS.colors.slate, display: 'block', mb: 0.3 }}>
+                          Punto de recepción
                         </Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 800, color: '#000000', lineHeight: 1.3 }}>
-                          Almacén Central de Papelería e Insumos
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: '#64748b' }}>
-                          Imprenta Universitaria UAGRM • Ciudad Universitaria
+                        <Typography variant="body2" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.charcoal, lineHeight: 1.3 }}>
+                          Almacén Central Litográfico • Ciudad Universitaria UAGRM
                         </Typography>
                       </Box>
                     </Stack>
@@ -557,111 +483,62 @@ export function CompraDetallePage() {
                 </Grid>
               )}
 
-              {/* CONTENIDO PESTAÑA: QUÉ SE COMPRA */}
+              {/* Tab: Qué se compra */}
               {tabActiva === 'detalle' && (
-                <TableContainer
-                  component={Paper}
-                  elevation={0}
-                  sx={{ borderRadius: 3, border: '1px solid #ebe6df', backgroundColor: '#ffffff' }}
-                >
-                  <Table>
-                    <TableHead sx={{ backgroundColor: '#faf8f5' }}>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 800, color: '#475569', fontSize: '0.78rem', textTransform: 'uppercase' }}>
-                          Concepto de Suministro
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 800, color: '#475569', fontSize: '0.78rem', textTransform: 'uppercase' }}>
-                          Destino
-                        </TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 800, color: '#475569', fontSize: '0.78rem', textTransform: 'uppercase' }}>
-                          Monto Estimado
-                        </TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      <TableRow hover sx={{ '& td': { borderBottom: '1px solid #f0ede6', py: 2 } }}>
-                        <TableCell>
-                          <Typography variant="body2" sx={{ fontWeight: 800, color: '#000000' }}>
-                            Lote de Insumos Litográficos para Producción
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: '#64748b' }}>
-                            Reposición aprobada para taller de impresión
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#000000' }}>
-                            Almacén Litográfico UAGRM
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography variant="body1" sx={{ fontWeight: 800, color: '#000000' }}>
-                            {formatearMoneda(compra.total_estimado)}
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-
-              {/* CONTENIDO PESTAÑA: AVANCE */}
-              {tabActiva === 'avance' && (
-                <Stack spacing={2}>
-                  <Box sx={{ p: 2, borderRadius: 2.5, backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#000000' }}>
-                      Historial de Estado
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: '#64748b', mt: 0.5 }}>
-                      Estado actual: <strong>{estadoActual}</strong> registrado el {formatearFecha(compra.fecha_generacion)}.
+                <Box sx={{ p: 2, borderRadius: 2, border: `1px solid ${UAGRM_TOKENS.border.subtle}` }}>
+                  <Typography variant="body2" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.charcoal }}>
+                    Lote de Materia Prima e Insumos Litográficos
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: UAGRM_TOKENS.colors.slate, display: 'block', mt: 0.5 }}>
+                    Reposición de stock para impresión offset, planchas CTP y acabados.
+                  </Typography>
+                  <Box sx={{ mt: 2, pt: 2, borderTop: `1px solid ${UAGRM_TOKENS.border.subtle}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography sx={{ fontWeight: 700, color: UAGRM_TOKENS.colors.slate }}>Subtotal Comprometido:</Typography>
+                    <Typography sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.primaryDark, fontSize: '1.1rem' }}>
+                      {formatearMoneda(compra.total_estimado)}
                     </Typography>
                   </Box>
-                </Stack>
+                </Box>
+              )}
+
+              {/* Tab: Avance */}
+              {tabActiva === 'avance' && (
+                <Box sx={{ p: 2.5, borderRadius: 2, backgroundColor: UAGRM_TOKENS.colors.background.subtle, border: `1px solid ${UAGRM_TOKENS.border.subtle}` }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.charcoal }}>
+                    Trazabilidad de la Orden de Compra
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate, mt: 0.5 }}>
+                    Estado actual en el sistema: <strong>{estadoActual}</strong> registrado el {formatearFecha(compra.fecha_generacion)}.
+                  </Typography>
+                </Box>
               )}
             </Card>
           </Stack>
         </Grid>
 
-        {/* =========================================================
-            COLUMNA DERECHA: Panel de Acción y Total Estimado
-            ========================================================= */}
+        {/* Columna Derecha: Panel de Acción */}
         <Grid size={{ xs: 12, md: 4.5, lg: 4 }}>
           <Stack spacing={3}>
-            {/* Tarjeta de Acción */}
             <Card
               elevation={0}
               sx={{
-                borderRadius: 4,
-                border: '1px solid #e8e4dc',
-                backgroundColor: '#ffffff',
+                borderRadius: `${UAGRM_TOKENS.radii.xl}px`,
+                border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
+                backgroundColor: UAGRM_TOKENS.colors.background.paper,
                 p: { xs: 2.5, sm: 3.5 },
-                boxShadow: '0 2px 12px rgba(0,0,0,0.02)',
+                boxShadow: UAGRM_TOKENS.shadows.card,
               }}
             >
-              {/* Badge de Estado Superior */}
               <Box sx={{ mb: 2 }}>
-                <Box
-                  component="span"
-                  sx={{
-                    display: 'inline-block',
-                    px: 1.8,
-                    py: 0.5,
-                    borderRadius: 50,
-                    fontWeight: 700,
-                    fontSize: '0.78rem',
-                    backgroundColor: badgeInfo.bg,
-                    border: `1px solid ${badgeInfo.border}`,
-                    color: badgeInfo.color,
-                  }}
-                >
-                  {badgeInfo.label}
-                </Box>
+                <Badge variant={getBadgeVariant(estadoActual)}>
+                  {estadoActual}
+                </Badge>
               </Box>
 
-              {/* Total Estimado */}
               <Typography
                 variant="caption"
                 sx={{
-                  color: '#64748b',
+                  color: UAGRM_TOKENS.colors.slate,
                   fontWeight: 800,
                   fontSize: '0.75rem',
                   letterSpacing: '0.04em',
@@ -669,14 +546,14 @@ export function CompraDetallePage() {
                   display: 'block',
                 }}
               >
-                TOTAL ESTIMADO
+                TOTAL PRESUPUESTADO
               </Typography>
 
               <Typography
                 variant="h4"
                 sx={{
                   fontWeight: 900,
-                  color: '#000000',
+                  color: UAGRM_TOKENS.colors.primaryDark,
                   letterSpacing: '-0.02em',
                   mt: 0.5,
                   mb: 3,
@@ -686,206 +563,134 @@ export function CompraDetallePage() {
                 {formatearMoneda(compra.total_estimado)}
               </Typography>
 
-              {/* Botones de Acción Apilados (Estilo Píldora del Mockup) */}
               <Stack spacing={1.5}>
-                {/* 1. Botón Principal: Aprobar Orden (si está SUGERIDA) */}
                 {estadoActual === 'SUGERIDA' && (
                   <Button
-                    variant="contained"
+                    variant="default"
                     fullWidth
                     disabled={procesando}
                     onClick={() => handleCambiarEstado('APROBADA', 'Orden de compra aprobada exitosamente.')}
-                    startIcon={procesando ? <CircularProgress size={16} color="inherit" /> : <Check size={16} />}
-                    sx={{
-                      borderRadius: 50,
-                      textTransform: 'none',
-                      fontWeight: 800,
-                      py: 1.2,
-                      backgroundColor: '#111827',
-                      color: '#ffffff',
-                      boxShadow: 'none',
-                      '&:hover': { backgroundColor: '#000000' },
-                    }}
+                    loading={procesando}
+                    icon={<Check size={16} />}
                   >
-                    Aprobar orden
+                    Aprobar Orden
                   </Button>
                 )}
 
-                {/* 1.1 Si está APROBADA: Botón Enviar a Proveedor */}
                 {estadoActual === 'APROBADA' && (
                   <Button
-                    variant="contained"
+                    variant="default"
                     fullWidth
                     disabled={procesando}
                     onClick={() => handleCambiarEstado('ENVIADA', 'Orden enviada formalmente al proveedor.')}
-                    startIcon={procesando ? <CircularProgress size={16} color="inherit" /> : <Truck size={16} />}
-                    sx={{
-                      borderRadius: 50,
-                      textTransform: 'none',
-                      fontWeight: 800,
-                      py: 1.2,
-                      backgroundColor: '#111827',
-                      color: '#ffffff',
-                      boxShadow: 'none',
-                      '&:hover': { backgroundColor: '#000000' },
-                    }}
+                    loading={procesando}
+                    icon={<Truck size={16} />}
                   >
-                    Enviar a proveedor
+                    Enviar a Proveedor
                   </Button>
                 )}
 
-                {/* 2. Botón Recibir en Almacén (Activo cuando está ENVIADA o APROBADA) */}
                 {estadoActual !== 'RECIBIDA' && estadoActual !== 'CANCELADA' && (
                   <Button
-                    variant="outlined"
+                    variant="secondary"
                     fullWidth
                     disabled={procesando || estadoActual === 'SUGERIDA'}
-                    onClick={() => handleCambiarEstado('RECIBIDA', 'Mercadería recibida e ingresada al almacén.')}
-                    startIcon={<Package size={16} />}
-                    sx={{
-                      borderRadius: 50,
-                      textTransform: 'none',
-                      fontWeight: 700,
-                      py: 1.1,
-                      color: estadoActual === 'ENVIADA' ? '#047857' : '#94a3b8',
-                      borderColor: estadoActual === 'ENVIADA' ? '#a7f3d0' : '#e2e8f0',
-                      backgroundColor: estadoActual === 'ENVIADA' ? '#ecfdf5' : '#ffffff',
-                      '&:hover': {
-                        backgroundColor: '#f1f5f9',
-                        borderColor: '#cbd5e1',
-                      },
-                    }}
+                    onClick={() => handleCambiarEstado('RECIBIDA', 'Mercadería recibida e ingresada al inventario.')}
+                    icon={<Package size={16} />}
                   >
-                    Recibir en almacén
+                    Recibir en Almacén
                   </Button>
                 )}
 
-                {/* 3. Botón Imprimir */}
                 <Button
-                  variant="outlined"
+                  variant="outline"
                   fullWidth
                   onClick={() => window.print()}
-                  startIcon={<Printer size={16} />}
-                  sx={{
-                    borderRadius: 50,
-                    textTransform: 'none',
-                    fontWeight: 700,
-                    py: 1.1,
-                    color: '#0f172a',
-                    borderColor: '#e2e8f0',
-                    backgroundColor: '#ffffff',
-                    '&:hover': {
-                      backgroundColor: '#f8fafc',
-                      borderColor: '#cbd5e1',
-                    },
-                  }}
+                  icon={<Printer size={16} />}
                 >
-                  Imprimir
+                  Imprimir Comprobante
                 </Button>
 
-                {/* 4. Cancelar Orden dentro de un botón como los otros */}
                 {!esCancelada && estadoActual !== 'RECIBIDA' && (
                   <Button
-                    variant="outlined"
+                    variant="outline"
+                    color="error"
                     fullWidth
                     onClick={() => setModalCancelarAbierto(true)}
-                    startIcon={<XCircle size={16} />}
-                    sx={{
-                      borderRadius: 50,
-                      textTransform: 'none',
-                      fontWeight: 700,
-                      py: 1.1,
-                      color: '#dc2626',
-                      borderColor: '#fecaca',
-                      backgroundColor: '#ffffff',
-                      '&:hover': {
-                        backgroundColor: '#fef2f2',
-                        borderColor: '#f87171',
-                      },
-                    }}
+                    icon={<XCircle size={16} />}
                   >
-                    Cancelar orden
+                    Cancelar Orden
                   </Button>
                 )}
               </Stack>
             </Card>
 
-            {/* Caja Informativa «¿Qué sigue?» (Idéntica al Mockup) */}
-            <Card
-              elevation={0}
+            <Box
               sx={{
-                borderRadius: 4,
-                border: '1px solid #e0f2fe',
-                backgroundColor: '#f0f9ff',
-                p: { xs: 2.5, sm: 3 },
+                borderRadius: `${UAGRM_TOKENS.radii.lg}px`,
+                border: `1px solid ${UAGRM_TOKENS.colors.cyan}30`,
+                backgroundColor: `${UAGRM_TOKENS.colors.cyan}10`,
+                p: { xs: 2, sm: 2.5 },
               }}
             >
-              <CardContent sx={{ p: 0 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.2 }}>
-                  <HelpCircle size={18} color="#0284c7" />
-                  <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#0369a1' }}>
-                    ¿Qué sigue?
-                  </Typography>
-                </Box>
-
-                <Typography variant="body2" sx={{ color: '#0369a1', fontSize: '0.86rem', lineHeight: 1.5 }}>
-                  {estadoActual === 'SUGERIDA' &&
-                    'Revisa los datos de la orden y apruébala. Después se podrá enviar al proveedor. «Recibir en almacén» se activa cuando la mercadería ya fue enviada y llega a la imprenta.'}
-                  {estadoActual === 'APROBADA' &&
-                    'La orden de compra ha sido aprobada formalmente. Ahora puedes emitirla y enviarla al proveedor litográfico para programar el despacho.'}
-                  {estadoActual === 'ENVIADA' &&
-                    'El pedido está en camino. Cuando los suministros lleguen a los almacenes de la Ciudad Universitaria, presiona «Recibir en almacén».'}
-                  {estadoActual === 'RECIBIDA' &&
-                    'Esta orden de compra ya fue recepcionada con éxito y los materiales se encuentran registrados en el inventario activo de la imprenta.'}
-                  {estadoActual === 'CANCELADA' &&
-                    'Esta orden fue cancelada y no generará movimientos de almacén ni compromisos presupuestarios.'}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <HelpCircle size={18} color={UAGRM_TOKENS.colors.cyan} />
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.charcoal }}>
+                  Guía de Procedimiento
                 </Typography>
-              </CardContent>
-            </Card>
+              </Box>
+
+              <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate, fontSize: '0.85rem', lineHeight: 1.5 }}>
+                {estadoActual === 'SUGERIDA' &&
+                  'Revisa los datos de la orden y apruébala. Posteriormente podrá enviarse al proveedor adjudicado.'}
+                {estadoActual === 'APROBADA' &&
+                  'La orden de compra ha sido validada. Emítela formalmente hacia el proveedor para coordinar la entrega.'}
+                {estadoActual === 'ENVIADA' &&
+                  'El despacho se encuentra en tránsito. Al recibir los insumos en el almacén, presiona «Recibir en Almacén».'}
+                {estadoActual === 'RECIBIDA' &&
+                  'La orden fue recepcionada satisfactoriamente y el lote de insumos ingresó al Kardex activo.'}
+                {estadoActual === 'CANCELADA' &&
+                  'Orden anulada. No compromete presupuesto ni altera el stock de insumos litográficos.'}
+              </Typography>
+            </Box>
           </Stack>
         </Grid>
       </Grid>
 
-      {/* DIÁLOGO MODAL: CONFIRMAR CANCELACIÓN */}
-      <Dialog
+      {/* Modal Desacoplado: Cancelar Orden */}
+      <Modal
         open={modalCancelarAbierto}
         onClose={() => !procesando && setModalCancelarAbierto(false)}
+        title="Cancelar Orden de Compra"
+        subtitle={`Confirmación de anulación para la orden #OC-${compra.id_orden_compra}`}
         maxWidth="xs"
-        fullWidth
-        slotProps={{ paper: { sx: { borderRadius: 3, p: 1 } } }}
+        actions={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => setModalCancelarAbierto(false)}
+              disabled={procesando}
+            >
+              Atrás
+            </Button>
+            <Button
+              variant="default"
+              color="error"
+              onClick={handleCancelarOrden}
+              loading={procesando}
+              icon={<XCircle size={16} />}
+            >
+              Sí, Cancelar Orden
+            </Button>
+          </>
+        }
       >
-        <DialogTitle sx={{ fontWeight: 800, color: '#991b1b', pb: 1 }}>
-          Cancelar Orden de Compra
-        </DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" sx={{ color: '#475569' }}>
-            ¿Está seguro de que desea cancelar la <strong>Orden de Compra #OC-{compra.id_orden_compra}</strong>? Esta acción actualizará el estado a CANCELADA en el servidor.
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button
-            onClick={() => setModalCancelarAbierto(false)}
-            disabled={procesando}
-            sx={{ textTransform: 'none', fontWeight: 700, color: '#64748b' }}
-          >
-            Atrás
-          </Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={handleCancelarOrden}
-            disabled={procesando}
-            startIcon={procesando ? <CircularProgress size={16} color="inherit" /> : <XCircle size={16} />}
-            sx={{
-              borderRadius: 50,
-              textTransform: 'none',
-              fontWeight: 700,
-            }}
-          >
-            {procesando ? 'Cancelando...' : 'Sí, Cancelar Orden'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate, pt: 1 }}>
+          ¿Está seguro de que desea cancelar la <strong>Orden de Compra #OC-{compra.id_orden_compra}</strong>? Esta acción actualizará el estado a CANCELADA en el servidor institucional.
+        </Typography>
+      </Modal>
     </Box>
   );
 }
+
+export default CompraDetallePage;
