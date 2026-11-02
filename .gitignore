@@ -124,3 +124,6 @@ docker-compose.override.yml
 *.tmp
 *.temp
 .cache/
+
+# Notas y guías de trabajo locales personales
+GUIA_GIT_FLUJO_TRABAJO.md

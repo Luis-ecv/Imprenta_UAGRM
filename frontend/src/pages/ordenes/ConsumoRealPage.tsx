@@ -1,5 +1,5 @@
-﻿import { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft,
   Check,
@@ -7,107 +7,142 @@ import {
   Info,
   Loader2,
   AlertOctagon,
-} from 'lucide-react'
-import { ordenesApi } from '@/api/ordenes.api'
-import { insumosApi } from '@/api/insumos.api'
-import type { OrdenTrabajoResponse, InsumoResponse } from '@/types'
+} from 'lucide-react';
+import { ordenesApi } from '@/api/ordenes.api';
+import { insumosApi } from '@/api/insumos.api';
+import { Button } from '@/components/ui';
+import { UAGRM_TOKENS } from '@/theme/tokens';
+import type { OrdenTrabajoResponse, InsumoResponse } from '@/types';
 
 export function ConsumoRealPage() {
-  const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
 
-  const [orden, setOrden] = useState<OrdenTrabajoResponse | null>(null)
-  const [insumos, setInsumos] = useState<InsumoResponse[]>([])
-  const [cargando, setCargando] = useState<boolean>(true)
-  const [guardando, setGuardando] = useState<boolean>(false)
-  const [error, setError] = useState<string | null>(null)
+  const [orden, setOrden] = useState<OrdenTrabajoResponse | null>(null);
+  const [insumos, setInsumos] = useState<InsumoResponse[]>([]);
+  const [cargando, setCargando] = useState<boolean>(true);
+  const [guardando, setGuardando] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const [insumoId, setInsumoId] = useState<number | ''>('')
-  const [papelUtilizado, setPapelUtilizado] = useState<string>('500')
-  const [papelMerma, setPapelMerma] = useState<string>('15')
-  const [observaciones, setObservaciones] = useState<string>('')
+  const [insumoId, setInsumoId] = useState<number | ''>('');
+  const [papelUtilizado, setPapelUtilizado] = useState<string>('500');
+  const [papelMerma, setPapelMerma] = useState<string>('15');
+  const [observaciones, setObservaciones] = useState<string>('');
 
   useEffect(() => {
     async function cargar() {
-      if (!id) return
+      if (!id) return;
       try {
-        setCargando(true)
+        setCargando(true);
         const [resOrden, resInsumos] = await Promise.all([
           ordenesApi.obtener(Number(id)),
           insumosApi.listar({ por_pagina: 100 }),
-        ])
-        setOrden(resOrden)
-        setInsumos(resInsumos.datos || [])
+        ]);
+        setOrden(resOrden);
+        setInsumos(resInsumos.datos || []);
         if (resInsumos.datos?.length > 0) {
-          setInsumoId(resInsumos.datos[0].id_insumo)
+          setInsumoId(resInsumos.datos[0].id_insumo);
         }
       } catch {
-        setError('Error al cargar la orden o el catálogo de insumos.')
+        setError('Error al cargar la orden o el catálogo de insumos.');
       } finally {
-        setCargando(false)
+        setCargando(false);
       }
     }
-    cargar()
-  }, [id])
+    cargar();
+  }, [id]);
 
   async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault()
-    if (!orden || !insumoId) return
+    event.preventDefault();
+    if (!orden || !insumoId) return;
 
     try {
-      setGuardando(true)
+      setGuardando(true);
+      setError(null);
       await ordenesApi.registrarConsumoReal(orden.id_orden, {
         orden_id: orden.id_orden,
         insumo_id: Number(insumoId),
         cantidad_utilizada: parseFloat(papelUtilizado) || 0,
         cantidad_merma: parseFloat(papelMerma) || 0,
-      })
-      navigate('/ordenes')
+      });
+      navigate('/ordenes');
     } catch {
-      setError('Error al registrar el consumo real de producción.')
+      setError('Error al registrar el consumo real de producción.');
     } finally {
-      setGuardando(false)
+      setGuardando(false);
     }
   }
 
   if (cargando) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3 text-slate-500">
-        <Loader2 className="h-8 w-8 animate-spin text-[#800000]" />
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: UAGRM_TOKENS.colors.ruby }} />
         <p className="text-sm font-semibold">Cargando datos de la orden...</p>
       </div>
-    )
+    );
   }
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <Link
         to="/ordenes"
-        className="inline-flex items-center gap-2 text-sm font-bold text-[#800000] hover:text-[#670000] transition"
+        className="inline-flex items-center gap-2 text-sm font-bold hover:opacity-80 transition"
+        style={{ color: UAGRM_TOKENS.colors.ruby }}
       >
         <ArrowLeft size={16} /> Volver al tablero de producción
       </Link>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
-        <div className="border-b border-slate-100 pb-4">
-          <span className="font-mono text-xs font-bold text-[#800000]">{orden?.codigo_ot}</span>
-          <h1 className="text-2xl font-extrabold text-[#263454] mt-1">
+      <div
+        className="rounded-2xl p-6 shadow-sm space-y-5"
+        style={{
+          backgroundColor: UAGRM_TOKENS.colors.background.paper,
+          border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
+        }}
+      >
+        <div
+          className="pb-4"
+          style={{ borderBottom: `1px solid ${UAGRM_TOKENS.border.subtle}` }}
+        >
+          <span
+            className="font-mono text-xs font-bold"
+            style={{ color: UAGRM_TOKENS.colors.ruby }}
+          >
+            {orden?.codigo_ot}
+          </span>
+          <h1
+            className="text-2xl font-extrabold mt-1"
+            style={{ color: UAGRM_TOKENS.colors.primaryDark }}
+          >
             Registro de Consumo Real y Mermas
           </h1>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs" style={{ color: UAGRM_TOKENS.colors.slate }}>
             {orden?.proforma?.detalles?.[0]?.descripcion_trabajo || 'Orden de Trabajo Litográfica'}
           </p>
         </div>
 
         {error && (
-          <div className="flex items-center gap-3 p-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-sm">
-            <AlertCircle size={18} className="shrink-0 text-rose-600" />
+          <div
+            className="flex items-center gap-3 p-4 rounded-xl text-sm"
+            style={{
+              backgroundColor: UAGRM_TOKENS.colors.status.error.light,
+              border: `1px solid ${UAGRM_TOKENS.border.danger}`,
+              color: UAGRM_TOKENS.colors.status.error.dark,
+            }}
+          >
+            <AlertCircle size={18} className="shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
-        <div className="flex gap-3 rounded-xl border border-sky-200 bg-sky-50 p-3.5 text-xs leading-5 text-sky-900">
-          <Info size={18} className="shrink-0 text-sky-600 mt-0.5" />
+        <div
+          className="flex gap-3 rounded-xl p-3.5 text-xs leading-5"
+          style={{
+            backgroundColor: UAGRM_TOKENS.colors.status.info.light,
+            border: `1px solid ${UAGRM_TOKENS.colors.status.info.border}`,
+            color: UAGRM_TOKENS.colors.status.info.dark,
+          }}
+        >
+          <Info size={18} className="shrink-0 mt-0.5" />
           <span>
             Los consumos registrados se deducen del almacén central y alimentan el dataset de Machine Learning para optimizar los pedidos futuros.
           </span>
@@ -115,7 +150,10 @@ export function ConsumoRealPage() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-xs font-bold uppercase text-slate-600 mb-1.5">
+            <label
+              className="block text-xs font-bold uppercase mb-1.5"
+              style={{ color: UAGRM_TOKENS.colors.charcoal }}
+            >
               Insumo de Sustrato
             </label>
             <select
@@ -134,7 +172,10 @@ export function ConsumoRealPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1">
+              <label
+                className="block text-xs font-bold mb-1"
+                style={{ color: UAGRM_TOKENS.colors.charcoal }}
+              >
                 Cantidad Útil Utilizada
               </label>
               <input
@@ -149,7 +190,10 @@ export function ConsumoRealPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-orange-700 mb-1 flex items-center gap-1">
+              <label
+                className="block text-xs font-bold mb-1 flex items-center gap-1"
+                style={{ color: UAGRM_TOKENS.colors.status.warning.dark }}
+              >
                 <AlertOctagon size={13} /> Merma (Desperdicio)
               </label>
               <input
@@ -158,13 +202,21 @@ export function ConsumoRealPage() {
                 step="0.01"
                 value={papelMerma}
                 onChange={(e) => setPapelMerma(e.target.value)}
-                className="form-input text-right font-mono font-bold border-orange-300 bg-orange-50 text-orange-800"
+                className="form-input text-right font-mono font-bold"
+                style={{
+                  borderColor: UAGRM_TOKENS.colors.status.warning.border,
+                  backgroundColor: UAGRM_TOKENS.colors.status.warning.light,
+                  color: UAGRM_TOKENS.colors.status.warning.dark,
+                }}
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
+            <label
+              className="block text-xs font-bold uppercase mb-1"
+              style={{ color: UAGRM_TOKENS.colors.charcoal }}
+            >
               Observaciones del Prensista
             </label>
             <textarea
@@ -177,23 +229,29 @@ export function ConsumoRealPage() {
           </div>
 
           <div className="flex items-center justify-center gap-3 pt-3">
-            <Link
+            <Button
+              variant="outline"
+              component={Link}
               to="/ordenes"
-              className="flex items-center justify-center rounded-full bg-[#607285] px-6 py-2.5 text-sm font-bold text-white shadow hover:bg-[#4f5e6d] transition min-w-[125px]"
+              disabled={guardando}
+              style={{ minWidth: 125 }}
             >
               Cancelar
-            </Link>
-            <button
+            </Button>
+            <Button
               type="submit"
+              variant="default"
               disabled={guardando}
-              className="flex items-center justify-center gap-2 rounded-full bg-[#1e2b4d] px-6 py-2.5 text-sm font-bold text-white shadow hover:bg-[#141d34] transition disabled:opacity-60 cursor-pointer min-w-[165px]"
+              isLoading={guardando}
+              icon={<Check size={18} />}
+              style={{ minWidth: 165 }}
             >
-              {guardando ? <Loader2 size={16} className="animate-spin" /> : <Check size={18} />}
-              <span>Confirmar</span>
-            </button>
+              Confirmar
+            </Button>
           </div>
         </form>
       </div>
     </div>
-  )
+  );
 }
+export default ConsumoRealPage;

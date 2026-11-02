@@ -1,161 +1,193 @@
-﻿import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, ShoppingCart, Check, AlertCircle, Loader2 } from 'lucide-react'
-import { comprasApi } from '@/api/compras.api'
-import type { ProveedorResponse } from '@/types'
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import TextField from '@mui/material/TextField';
+import MenuItem from '@mui/material/MenuItem';
+import InputAdornment from '@mui/material/InputAdornment';
+import CircularProgress from '@mui/material/CircularProgress';
+import Alert from '@mui/material/Alert';
+import Stack from '@mui/material/Stack';
+import { ArrowLeft, ShoppingCart, Check } from 'lucide-react';
+
+import { comprasApi } from '@/api/compras.api';
+import { Button } from '@/components/ui';
+import { UAGRM_TOKENS } from '@/theme/tokens';
+import type { ProveedorResponse } from '@/types';
 
 export function CompraFormPage() {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
-  const [proveedores, setProveedores] = useState<ProveedorResponse[]>([])
-  const [proveedorId, setProveedorId] = useState<number | ''>('')
-  const [totalEstimado, setTotalEstimado] = useState<string>('1500')
-  const [estado, setEstado] = useState<string>('SUGERIDA')
+  const [proveedores, setProveedores] = useState<ProveedorResponse[]>([]);
+  const [proveedorId, setProveedorId] = useState<number | ''>('');
+  const [totalEstimado, setTotalEstimado] = useState<string>('1500');
+  const [estado, setEstado] = useState<string>('SUGERIDA');
 
-  const [guardando, setGuardando] = useState(false)
-  const [cargando, setCargando] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [guardando, setGuardando] = useState(false);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function cargarProveedores() {
       try {
-        setCargando(true)
-        const data = await comprasApi.listarProveedores()
-        setProveedores(data || [])
+        setCargando(true);
+        const data = await comprasApi.listarProveedores();
+        setProveedores(data || []);
         if (data?.length > 0) {
-          setProveedorId(data[0].id_proveedor)
+          setProveedorId(data[0].id_proveedor);
         }
       } catch {
-        setError('Error al cargar proveedores autorizados.')
+        setError('Error al cargar proveedores autorizados.');
       } finally {
-        setCargando(false)
+        setCargando(false);
       }
     }
-    cargarProveedores()
-  }, [])
+    cargarProveedores();
+  }, []);
 
   async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault()
-    if (!proveedorId) return
+    event.preventDefault();
+    if (!proveedorId) return;
 
     try {
-      setGuardando(true)
+      setGuardando(true);
       await comprasApi.crear({
         proveedor_id: Number(proveedorId),
         total_estimado: parseFloat(totalEstimado) || 0,
         estado,
-      })
-      navigate('/compras')
+      });
+      navigate('/compras');
     } catch {
-      setError('Error al generar la orden de compra.')
+      setError('Error al generar la orden de compra.');
     } finally {
-      setGuardando(false)
+      setGuardando(false);
     }
   }
 
   if (cargando) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3 text-slate-500">
-        <Loader2 className="h-8 w-8 animate-spin text-[#800000]" />
-        <p className="text-sm font-semibold">Cargando proveedores...</p>
-      </div>
-    )
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '50vh', gap: 2 }}>
+        <CircularProgress size={32} sx={{ color: UAGRM_TOKENS.colors.ruby }} />
+        <Typography sx={{ fontSize: '0.9rem', color: UAGRM_TOKENS.colors.slate, fontWeight: 600 }}>
+          Cargando catálogo de proveedores autorizados...
+        </Typography>
+      </Box>
+    );
   }
 
   return (
-    <div className="max-w-xl mx-auto space-y-6">
-      <Link
+    <Box sx={{ maxWidth: 640, mx: 'auto', p: { xs: 2, sm: 3 } }}>
+      <Button
+        variant="ghost"
+        component={Link}
         to="/compras"
-        className="inline-flex items-center gap-2 text-sm font-bold text-[#800000] hover:text-[#670000] transition"
+        icon={<ArrowLeft size={16} />}
+        style={{ marginBottom: 16 }}
       >
-        <ArrowLeft size={16} /> Volver a compras
-      </Link>
+        Volver a órdenes de compra
+      </Button>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
-        <div className="border-b border-slate-100 pb-3">
-          <h1 className="text-2xl font-extrabold text-[#263454] flex items-center gap-2">
-            <ShoppingCart size={22} className="text-[#800000]" />
+      <Box
+        sx={{
+          borderRadius: `${UAGRM_TOKENS.radii.xl}px`,
+          border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
+          backgroundColor: UAGRM_TOKENS.colors.background.paper,
+          p: { xs: 2.5, sm: 4 },
+          boxShadow: UAGRM_TOKENS.shadows.card,
+        }}
+      >
+        <Box sx={{ borderBottom: `1px solid ${UAGRM_TOKENS.border.subtle}`, pb: 2.5, mb: 3 }}>
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 800,
+              color: UAGRM_TOKENS.colors.primaryDark,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+            }}
+          >
+            <ShoppingCart size={22} color={UAGRM_TOKENS.colors.ruby} />
             Generar Orden de Compra
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Emisión de pedido de reposición para el almacén de la imprenta.
-          </p>
-        </div>
+          </Typography>
+          <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate, mt: 0.5 }}>
+            Emisión de pedido de reposición para el almacén de la imprenta universitaria.
+          </Typography>
+        </Box>
 
         {error && (
-          <div className="flex items-center gap-3 p-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-sm">
-            <AlertCircle size={18} className="shrink-0 text-rose-600" />
-            <span>{error}</span>
-          </div>
+          <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setError(null)}>
+            {error}
+          </Alert>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
-              Proveedor Autorizado *
-            </label>
-            <select
-              required
+        <Box component="form" onSubmit={handleSubmit}>
+          <Stack spacing={2.5}>
+            <TextField
+              select
+              fullWidth
+              size="small"
+              label="Proveedor Autorizado *"
               value={proveedorId}
               onChange={(e) => setProveedorId(Number(e.target.value))}
-              className="form-input text-sm font-semibold"
             >
               {proveedores.map((p) => (
-                <option key={p.id_proveedor} value={p.id_proveedor}>
-                  {p.razon_social} (NIT: {p.nit})
-                </option>
+                <MenuItem key={p.id_proveedor} value={p.id_proveedor}>
+                  {p.razon_social} {p.nit ? `(NIT: ${p.nit})` : ''}
+                </MenuItem>
               ))}
-            </select>
-          </div>
+            </TextField>
 
-          <div>
-            <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
-              Monto Total Estimado (Bs.) *
-            </label>
-            <input
+            <TextField
+              fullWidth
+              size="small"
               type="number"
-              step="0.01"
-              min="0"
-              required
+              label="Monto Total Estimado (Bs) *"
               value={totalEstimado}
               onChange={(e) => setTotalEstimado(e.target.value)}
-              className="form-input text-right font-mono font-bold"
+              slotProps={{
+                input: {
+                  startAdornment: <InputAdornment position="start">Bs</InputAdornment>,
+                },
+              }}
             />
-          </div>
 
-          <div>
-            <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
-              Estado Inicial
-            </label>
-            <select
+            <TextField
+              select
+              fullWidth
+              size="small"
+              label="Estado Inicial de la Orden"
               value={estado}
               onChange={(e) => setEstado(e.target.value)}
-              className="form-input text-sm font-semibold"
             >
-              <option value="SUGERIDA">Sugerida por ML / Preventiva</option>
-              <option value="ENVIADA">Enviada al Proveedor</option>
-              <option value="APROBADA">Aprobada por Administración</option>
-            </select>
-          </div>
+              <MenuItem value="SUGERIDA">Sugerida por Almacén / Preventiva</MenuItem>
+              <MenuItem value="APROBADA">Aprobada por Administración</MenuItem>
+              <MenuItem value="ENVIADA">Enviada al Proveedor</MenuItem>
+            </TextField>
 
-          <div className="flex items-center justify-center gap-3 pt-3">
-            <Link
-              to="/compras"
-              className="flex items-center justify-center rounded-full bg-[#607285] px-6 py-2.5 text-sm font-bold text-white shadow hover:bg-[#4f5e6d] transition min-w-[125px]"
-            >
-              Cancelar
-            </Link>
-            <button
-              type="submit"
-              disabled={guardando}
-              className="flex items-center justify-center gap-2 rounded-full bg-[#1e2b4d] px-6 py-2.5 text-sm font-bold text-white shadow hover:bg-[#141d34] transition disabled:opacity-60 cursor-pointer min-w-[165px]"
-            >
-              {guardando ? <Loader2 size={16} className="animate-spin" /> : <Check size={18} />}
-              <span>Confirmar</span>
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
+            <Stack direction="row" spacing={2} sx={{ justifyContent: 'flex-end', pt: 2 }}>
+              <Button
+                variant="outline"
+                component={Link}
+                to="/compras"
+                disabled={guardando}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="default"
+                type="submit"
+                loading={guardando}
+                icon={<Check size={16} />}
+              >
+                Confirmar Emisión
+              </Button>
+            </Stack>
+          </Stack>
+        </Box>
+      </Box>
+    </Box>
+  );
 }
+
+export default CompraFormPage;
