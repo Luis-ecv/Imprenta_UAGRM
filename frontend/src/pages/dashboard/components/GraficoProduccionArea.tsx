@@ -106,3 +106,4 @@ export const GraficoProduccionArea: React.FC = () => {
 };
 
 export default GraficoProduccionArea;
+

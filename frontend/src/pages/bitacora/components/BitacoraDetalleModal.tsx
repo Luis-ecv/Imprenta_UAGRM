@@ -129,3 +129,4 @@ export const BitacoraDetalleModal: React.FC<BitacoraDetalleModalProps> = ({
 };
 
 export default BitacoraDetalleModal;
+
