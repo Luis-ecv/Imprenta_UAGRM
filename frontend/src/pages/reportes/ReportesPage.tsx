@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Stack from '@mui/material/Stack';
@@ -31,12 +31,28 @@ export function ReportesPage() {
 
   const tabsReporte: TabItem[] = useMemo(
     () => [
-      { key: 'consumo', label: 'Consumo y Mermas' },
-      { key: 'proformas', label: 'Proformas y Cotizaciones' },
-      { key: 'inventario', label: 'Estado de Almacén' },
+      {
+        key: 'consumo',
+        label: 'Consumo y Mermas',
+        count: Array.isArray(datosReporte) && reporteActivo === 'consumo' ? datosReporte.length : undefined,
+      },
+      {
+        key: 'proformas',
+        label: 'Proformas y Cotizaciones',
+        count: Array.isArray(datosReporte) && reporteActivo === 'proformas' ? datosReporte.length : undefined,
+      },
+      {
+        key: 'inventario',
+        label: 'Estado de Almacén',
+        count: Array.isArray(datosReporte) && reporteActivo === 'inventario' ? datosReporte.length : undefined,
+      },
     ],
-    []
+    [datosReporte, reporteActivo]
   );
+
+  useEffect(() => {
+    cargarReporte('consumo');
+  }, []);
 
   async function cargarReporte(tipo: TipoReporte) {
     try {
