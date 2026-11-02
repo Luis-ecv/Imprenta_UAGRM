@@ -4,25 +4,25 @@ import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import TextField from '@mui/material/TextField';
-import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import InputAdornment from '@mui/material/InputAdornment';
 import IconButton from '@mui/material/IconButton';
 import Alert from '@mui/material/Alert';
-import CircularProgress from '@mui/material/CircularProgress';
-import Chip from '@mui/material/Chip';
-import Divider from '@mui/material/Divider';
 import Paper from '@mui/material/Paper';
+import Divider from '@mui/material/Divider';
+import Chip from '@mui/material/Chip';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import { LogIn } from 'lucide-react';
 
 import { authApi } from '@/api/auth.api';
 import { setAccessToken } from '@/api/client';
 import { useAuth } from '@/hooks/useAuth';
-import { UAGRM_COLORS } from '@/theme/uagrmTheme';
+import { Button } from '@/components/ui';
+import { UAGRM_TOKENS } from '@/theme/tokens';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -41,19 +41,11 @@ export function LoginPage() {
     setErrorMensaje(null);
 
     try {
-      // 1. Iniciar sesión y obtener token JWT
       const tokenData = await authApi.login({ email, password });
-
-      // 2. Establecer token temporal en memoria para consultar perfil
       setAccessToken(tokenData.access_token);
-
-      // 3. Obtener perfil del usuario autenticado
       const perfilUsuario = await authApi.getMe();
-
-      // 4. Actualizar estado global en AuthContext
       login(tokenData.access_token, perfilUsuario);
 
-      // 5. Redireccionar según el rol oficial
       switch (perfilUsuario.rol) {
         case 'Operador Taller':
           navigate('/ordenes', { replace: true });
@@ -85,7 +77,6 @@ export function LoginPage() {
     }
   }
 
-  // Relleno rápido de credenciales de prueba
   function handleQuickFill(testEmail: string) {
     setEmail(testEmail);
     setPassword('Uagrm2026*');
@@ -98,13 +89,10 @@ export function LoginPage() {
         display: 'flex',
         minHeight: '100vh',
         width: '100%',
-        backgroundColor: UAGRM_COLORS.background.default,
+        backgroundColor: UAGRM_TOKENS.background.default,
       }}
     >
-      {/* =====================================================================
-          PANEL IZQUIERDO: Fondo uagrm1.png con degradado institucional
-          Logo central destacado + eslogan
-          ===================================================================== */}
+      {/* Panel Izquierdo Institucional */}
       <Box
         sx={{
           display: { xs: 'none', md: 'flex' },
@@ -118,14 +106,13 @@ export function LoginPage() {
           textAlign: 'center',
           color: '#ffffff',
           backgroundImage: `
-            linear-gradient(135deg, rgba(110, 0, 0, 0.88) 0%, rgba(20, 30, 55, 0.93) 100%),
+            linear-gradient(135deg, rgba(128, 0, 0, 0.90) 0%, rgba(30, 43, 77, 0.94) 100%),
             url('/uagrm1.png')
           `,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
       >
-        {/* Contenido centrado: Logo de la imprenta + Eslogan */}
         <Box
           sx={{
             display: 'flex',
@@ -136,69 +123,37 @@ export function LoginPage() {
             zIndex: 2,
           }}
         >
-          {/* Tarjeta contenedora del logo institucional con sombra y efecto flotante */}
-          {/* <Box
-            sx={{
-              backgroundColor: '#ffffff',
-              borderRadius: 4,
-              p: { xs: 3, lg: 4 },
-              mb: 4,
-              boxShadow: '0 24px 48px -12px rgba(0, 0, 0, 0.35)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-              '&:hover': {
-                transform: 'translateY(-4px)',
-                boxShadow: '0 30px 60px -12px rgba(0, 0, 0, 0.45)',
-              },
-            }}
-          > */}
-          {/* <Box
-              component="img"
-              src="/logo_imprenta.png"
-              alt="Logo Editorial e Imprenta Universitaria UAGRM"
-              sx={{
-                width: { md: 260, lg: 320 },
-                height: 'auto',
-                display: 'block',
-              }}
-            />
-          </Box> */}
-
-          {/* Eslogan centrado */}
           <Typography
             variant="h4"
             sx={{
-              fontWeight: 700,
+              fontWeight: 800,
               lineHeight: 1.25,
               color: '#ffffff',
               mb: 1.5,
-              letterSpacing: '-0.01em',
+              letterSpacing: '-0.02em',
             }}
           >
-            Gestión Integral y Predicción de Insumos mediante Machine Learning
+            Gestión Integral y Predicción Litográfica con Machine Learning
           </Typography>
 
           <Typography
             variant="body1"
             sx={{
-              color: 'rgba(255, 255, 255, 0.82)',
-              fontSize: '1.05rem',
+              color: 'rgba(255, 255, 255, 0.85)',
+              fontSize: '1rem',
               lineHeight: 1.6,
               mb: 3,
             }}
           >
-            Automatización litográfica institucional: presupuesta órdenes con precisión paramétrica,
-            controla la producción en taller y optimiza compras de papel y tintas con modelos predictivos.
+            Editorial e Imprenta Universitaria UAGRM. Automatización de cotizaciones por pliegos, control de producción en taller y planificación de compras preventivas.
           </Typography>
 
           <Box
             sx={{
-              width: 48,
+              width: 50,
               height: 3,
               borderRadius: 2,
-              backgroundColor: UAGRM_COLORS.cyan.main,
+              backgroundColor: UAGRM_TOKENS.colors.cyan,
               mb: 3,
             }}
           />
@@ -206,21 +161,18 @@ export function LoginPage() {
           <Typography
             variant="caption"
             sx={{
-              color: 'rgba(255, 255, 255, 0.65)',
+              color: 'rgba(255, 255, 255, 0.7)',
               letterSpacing: '0.08em',
               textTransform: 'uppercase',
-              fontWeight: 600,
+              fontWeight: 700,
             }}
           >
-            {/* Universidad Autónoma Gabriel René Moreno &bull; 2026 */}
+            Universidad Autónoma Gabriel René Moreno
           </Typography>
         </Box>
       </Box>
 
-      {/* =====================================================================
-          PANEL DERECHO: Card de Login estilo Material UI
-          Logo superior + Log in to your account + Inputs con iconos + Botón
-          ===================================================================== */}
+      {/* Panel Derecho: Formulario de Autenticación */}
       <Box
         sx={{
           flex: 1,
@@ -236,68 +188,53 @@ export function LoginPage() {
             width: '100%',
             maxWidth: 440,
             p: { xs: 3.5, sm: 5 },
-            borderRadius: 4,
-            border: `1px solid ${UAGRM_COLORS.border}`,
-            boxShadow: '0 20px 45px -10px rgba(30, 43, 77, 0.12)',
-            backgroundColor: '#ffffff',
+            borderRadius: `${UAGRM_TOKENS.radii.xl}px`,
+            border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
+            boxShadow: UAGRM_TOKENS.shadows.card,
+            backgroundColor: UAGRM_TOKENS.colors.background.paper,
           }}
         >
-          {/* Logo centrado en la parte superior del formulario */}
           <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2.5 }}>
             <Box
               component="img"
               src="/logo_imprenta.png"
-              alt="Logo Imprenta"
-              sx={{
-                height: 52,
-                width: 'auto',
-                display: 'block',
-              }}
+              alt="Logo Imprenta UAGRM"
+              sx={{ height: 52, width: 'auto', display: 'block' }}
             />
           </Box>
 
-          {/* Título centrado */}
           <Box sx={{ textAlign: 'center', mb: 3.5 }}>
             <Typography
               variant="h5"
               sx={{
-                fontWeight: 700,
-                color: 'secondary.main',
+                fontWeight: 800,
+                color: UAGRM_TOKENS.colors.primaryDark,
                 mb: 0.5,
                 fontSize: { xs: '1.4rem', sm: '1.55rem' },
               }}
             >
               Iniciar Sesión
             </Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate }}>
               Ingresa tus credenciales para acceder al sistema
             </Typography>
           </Box>
 
-          {/* Alerta de Error */}
           {errorMensaje && (
             <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
               {errorMensaje}
             </Alert>
           )}
 
-          {/* Formulario */}
           <Box component="form" onSubmit={handleLogin} noValidate>
             <Stack spacing={2.5}>
-              {/* Campo Correo Electrónico */}
               <Box>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontWeight: 600,
-                    color: 'text.primary',
-                    mb: 0.8,
-                  }}
-                >
-                  Correo electrónico
+                <Typography variant="body2" sx={{ fontWeight: 650, color: UAGRM_TOKENS.colors.charcoal, mb: 0.8 }}>
+                  Correo electrónico institucional
                 </Typography>
                 <TextField
                   fullWidth
+                  size="small"
                   id="email"
                   name="email"
                   type="email"
@@ -306,12 +243,11 @@ export function LoginPage() {
                   placeholder="ejemplo@uagrm.edu.bo"
                   required
                   autoFocus
-                  autoComplete="email"
                   slotProps={{
                     input: {
                       startAdornment: (
                         <InputAdornment position="start">
-                          <EmailOutlinedIcon sx={{ color: UAGRM_COLORS.cyan.main, fontSize: 20 }} />
+                          <EmailOutlinedIcon sx={{ color: UAGRM_TOKENS.colors.slate, fontSize: 18 }} />
                         </InputAdornment>
                       ),
                     },
@@ -319,20 +255,13 @@ export function LoginPage() {
                 />
               </Box>
 
-              {/* Campo Contraseña */}
               <Box>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontWeight: 600,
-                    color: 'text.primary',
-                    mb: 0.8,
-                  }}
-                >
-                  Contraseña
+                <Typography variant="body2" sx={{ fontWeight: 650, color: UAGRM_TOKENS.colors.charcoal, mb: 0.8 }}>
+                  Contraseña de acceso
                 </Typography>
                 <TextField
                   fullWidth
+                  size="small"
                   id="password"
                   name="password"
                   type={showPassword ? 'text' : 'password'}
@@ -340,18 +269,16 @@ export function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  autoComplete="current-password"
                   slotProps={{
                     input: {
                       startAdornment: (
                         <InputAdornment position="start">
-                          <LockOutlinedIcon sx={{ color: UAGRM_COLORS.cyan.main, fontSize: 20 }} />
+                          <LockOutlinedIcon sx={{ color: UAGRM_TOKENS.colors.slate, fontSize: 18 }} />
                         </InputAdornment>
                       ),
                       endAdornment: (
                         <InputAdornment position="end">
                           <IconButton
-                            aria-label="alternar visibilidad de contraseña"
                             onClick={() => setShowPassword(!showPassword)}
                             edge="end"
                             size="small"
@@ -365,7 +292,6 @@ export function LoginPage() {
                 />
               </Box>
 
-              {/* Recordar credenciales */}
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <FormControlLabel
                   control={
@@ -374,63 +300,45 @@ export function LoginPage() {
                       onChange={(e) => setRememberMe(e.target.checked)}
                       size="small"
                       sx={{
-                        color: 'text.secondary',
+                        color: UAGRM_TOKENS.colors.slate,
                         '&.Mui-checked': {
-                          color: UAGRM_COLORS.blue.light,
+                          color: UAGRM_TOKENS.colors.primaryDark,
                         },
                       }}
                     />
                   }
                   label={
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate, fontSize: '0.85rem' }}>
                       Recordar credenciales
                     </Typography>
                   }
                 />
               </Box>
 
-              {/* Botón de Iniciar Sesión */}
               <Button
                 type="submit"
-                variant="contained"
-                color="primary"
+                variant="default"
                 fullWidth
-                size="large"
-                disabled={isLoading}
-                sx={{
-                  py: 1.4,
-                  fontSize: '0.98rem',
-                  fontWeight: 700,
-                  borderRadius: 50,
-                  backgroundColor: UAGRM_COLORS.blue.main,
-                  '&:hover': {
-                    backgroundColor: UAGRM_COLORS.blue.dark,
-                  },
-                }}
+                loading={isLoading}
+                icon={<LogIn size={18} />}
+                style={{ padding: '10px 0' }}
               >
-                {isLoading ? (
-                  <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-                    <CircularProgress size={20} color="inherit" />
-                    <span>Verificando credenciales...</span>
-                  </Stack>
-                ) : (
-                  'Iniciar Sesión'
-                )}
+                Iniciar Sesión
               </Button>
             </Stack>
           </Box>
 
           {/* Accesos rápidos de prueba */}
-          <Box sx={{ mt: 3.5, pt: 2.5, borderTop: `1px solid ${UAGRM_COLORS.border}` }}>
+          <Box sx={{ mt: 3.5, pt: 2.5, borderTop: `1px solid ${UAGRM_TOKENS.border.subtle}` }}>
             <Divider sx={{ mb: 2 }}>
-              <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+              <Typography variant="caption" sx={{ color: UAGRM_TOKENS.colors.slate, fontWeight: 700 }}>
                 Cuentas de prueba rápida
               </Typography>
             </Divider>
 
             <Typography
               variant="caption"
-              sx={{ color: 'text.secondary', display: 'block', mb: 1.2, textAlign: 'center' }}
+              sx={{ color: UAGRM_TOKENS.colors.slate, display: 'block', mb: 1.2, textAlign: 'center' }}
             >
               Selecciona un rol para autocompletar:
             </Typography>
@@ -450,13 +358,13 @@ export function LoginPage() {
                   sx={{
                     cursor: 'pointer',
                     fontSize: '0.75rem',
-                    fontWeight: 600,
-                    backgroundColor: email === item.email ? UAGRM_COLORS.cyan.light : '#f1f5f9',
-                    color: email === item.email ? UAGRM_COLORS.blue.dark : 'text.primary',
-                    border: email === item.email ? `1px solid ${UAGRM_COLORS.cyan.main}` : '1px solid transparent',
+                    fontWeight: 650,
+                    backgroundColor: email === item.email ? UAGRM_TOKENS.colors.background.subtle : UAGRM_TOKENS.colors.background.paper,
+                    color: email === item.email ? UAGRM_TOKENS.colors.primaryDark : UAGRM_TOKENS.colors.charcoal,
+                    border: `1px solid ${email === item.email ? UAGRM_TOKENS.colors.primaryDark : UAGRM_TOKENS.border.subtle}`,
                     '&:hover': {
-                      backgroundColor: UAGRM_COLORS.cyan.light,
-                      color: UAGRM_COLORS.blue.dark,
+                      backgroundColor: UAGRM_TOKENS.colors.background.subtle,
+                      borderColor: UAGRM_TOKENS.colors.primaryDark,
                     },
                   }}
                 />
