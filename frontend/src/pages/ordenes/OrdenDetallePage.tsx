@@ -1,98 +1,167 @@
-import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Loader2, Calendar, CheckCircle2 } from 'lucide-react'
-import { ordenesApi } from '@/api/ordenes.api'
-import type { OrdenTrabajoResponse } from '@/types'
-import { formatearFecha } from '@/utils/formatters'
-import { COLORES_ESTADO_ORDEN, COLORES_PRIORIDAD } from '@/utils/constants'
+import { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { ArrowLeft, Loader2, Calendar, CheckCircle2 } from 'lucide-react';
+import { ordenesApi } from '@/api/ordenes.api';
+import type { OrdenTrabajoResponse, EstadoOrden, PrioridadOrden } from '@/types';
+import { formatearFecha } from '@/utils/formatters';
+import { Button, Badge } from '@/components/ui';
+import { UAGRM_TOKENS } from '@/theme/tokens';
 
 export function OrdenDetallePage() {
-  const { id } = useParams<{ id: string }>()
-  const [orden, setOrden] = useState<OrdenTrabajoResponse | null>(null)
-  const [cargando, setCargando] = useState(true)
+  const { id } = useParams<{ id: string }>();
+  const [orden, setOrden] = useState<OrdenTrabajoResponse | null>(null);
+  const [cargando, setCargando] = useState<boolean>(true);
 
   useEffect(() => {
     async function cargar() {
-      if (!id) return
+      if (!id) return;
       try {
-        setCargando(true)
-        const data = await ordenesApi.obtener(Number(id))
-        setOrden(data)
+        setCargando(true);
+        const data = await ordenesApi.obtener(Number(id));
+        setOrden(data);
       } finally {
-        setCargando(false)
+        setCargando(false);
       }
     }
-    cargar()
-  }, [id])
+    cargar();
+  }, [id]);
 
   if (cargando) {
     return (
       <div className="flex justify-center py-16">
-        <Loader2 className="animate-spin text-[#800000]" />
+        <Loader2 className="animate-spin" style={{ color: UAGRM_TOKENS.colors.ruby }} />
       </div>
-    )
+    );
   }
 
   if (!orden) {
     return (
-      <div className="p-8 text-center text-slate-500">
-        <p>No se encontró la orden solicitada.</p>
-        <Link to="/ordenes" className="text-[#800000] font-bold mt-2 inline-block">Volver a taller</Link>
+      <div className="p-8 text-center" style={{ color: UAGRM_TOKENS.colors.slate }}>
+        <p>No se encontrÃ³ la orden solicitada.</p>
+        <Link
+          to="/ordenes"
+          className="font-bold mt-2 inline-block hover:opacity-80 transition"
+          style={{ color: UAGRM_TOKENS.colors.ruby }}
+        >
+          Volver a taller
+        </Link>
       </div>
-    )
+    );
   }
 
-  const detalle = orden.detalles_orden?.[0]
+  const detalle = orden.detalles_orden?.[0];
+
+  const estadoVariantMap: Record<EstadoOrden, 'neutral' | 'warning' | 'info' | 'primary' | 'success' | 'secondary'> = {
+    REGISTRADO: 'neutral',
+    'EN COLA': 'warning',
+    'EN IMPRESION': 'info',
+    'EN ACABADO': 'secondary',
+    FINALIZADO: 'success',
+    ENTREGADO: 'primary',
+  };
+
+  const prioridadVariantMap: Record<PrioridadOrden, 'neutral' | 'error'> = {
+    NORMAL: 'neutral',
+    URGENTE: 'error',
+  };
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <Link to="/ordenes" className="inline-flex items-center gap-2 text-sm font-bold text-[#800000]">
+      <Link
+        to="/ordenes"
+        className="inline-flex items-center gap-2 text-sm font-bold hover:opacity-80 transition"
+        style={{ color: UAGRM_TOKENS.colors.ruby }}
+      >
         <ArrowLeft size={16} /> Volver al tablero
       </Link>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-6">
-        <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+      <div
+        className="rounded-2xl p-6 shadow-sm space-y-6"
+        style={{
+          backgroundColor: UAGRM_TOKENS.colors.background.paper,
+          border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
+        }}
+      >
+        <div
+          className="flex items-start justify-between pb-4"
+          style={{ borderBottom: `1px solid ${UAGRM_TOKENS.border.subtle}` }}
+        >
           <div>
-            <span className="font-mono text-xs font-bold text-[#800000]">{orden.codigo_ot}</span>
-            <h1 className="text-2xl font-black text-[#263454] mt-1">
-              {orden.proforma?.detalles?.[0]?.descripcion_trabajo || 'Orden de Producción'}
+            <span
+              className="font-mono text-xs font-bold"
+              style={{ color: UAGRM_TOKENS.colors.ruby }}
+            >
+              {orden.codigo_ot}
+            </span>
+            <h1
+              className="text-2xl font-black mt-1"
+              style={{ color: UAGRM_TOKENS.colors.primaryDark }}
+            >
+              {orden.proforma?.detalles?.[0]?.descripcion_trabajo || 'Orden de ProducciÃ³n'}
             </h1>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs mt-1" style={{ color: UAGRM_TOKENS.colors.slate }}>
               Cliente: <strong>{orden.proforma?.cliente?.razon_social || 'UAGRM'}</strong>
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <span className={`px-2.5 py-0.5 rounded text-xs font-bold border ${COLORES_PRIORIDAD[orden.prioridad]}`}>
+            <Badge variant={prioridadVariantMap[orden.prioridad] || 'neutral'}>
               {orden.prioridad}
-            </span>
-            <span className={`px-3 py-1 rounded-full text-xs font-bold border ${COLORES_ESTADO_ORDEN[orden.estado_actual]}`}>
+            </Badge>
+            <Badge variant={estadoVariantMap[orden.estado_actual] || 'neutral'}>
               {orden.estado_actual}
-            </span>
+            </Badge>
           </div>
         </div>
 
         {detalle && (
-          <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100 text-xs">
-            <p><strong>Formato de Corte:</strong> {detalle.formato_corte}</p>
-            <p><strong>Encuadernación:</strong> {detalle.tipo_encuadernacion}</p>
+          <div
+            className="space-y-3 p-4 rounded-xl text-xs"
+            style={{
+              backgroundColor: UAGRM_TOKENS.colors.background.subtle,
+              border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
+            }}
+          >
+            <p>
+              <strong style={{ color: UAGRM_TOKENS.colors.charcoal }}>Formato de Corte:</strong>{' '}
+              <span style={{ color: UAGRM_TOKENS.colors.slate }}>{detalle.formato_corte}</span>
+            </p>
+            <p>
+              <strong style={{ color: UAGRM_TOKENS.colors.charcoal }}>EncuadernaciÃ³n:</strong>{' '}
+              <span style={{ color: UAGRM_TOKENS.colors.slate }}>{detalle.tipo_encuadernacion}</span>
+            </p>
             {detalle.especificaciones_taller && (
-              <p><strong>Especificaciones Taller:</strong> {detalle.especificaciones_taller}</p>
+              <p>
+                <strong style={{ color: UAGRM_TOKENS.colors.charcoal }}>Especificaciones Taller:</strong>{' '}
+                <span style={{ color: UAGRM_TOKENS.colors.slate }}>{detalle.especificaciones_taller}</span>
+              </p>
             )}
-            <p className="flex items-center gap-1 text-slate-600">
-              <Calendar size={13} /> Fecha de Compromiso: <strong>{formatearFecha(orden.fecha_compromiso)}</strong>
+            <p
+              className="flex items-center gap-1"
+              style={{ color: UAGRM_TOKENS.colors.slate }}
+            >
+              <Calendar size={13} color={UAGRM_TOKENS.colors.mutedSlate} /> Fecha de Compromiso:{' '}
+              <strong style={{ color: UAGRM_TOKENS.colors.charcoal }}>
+                {formatearFecha(orden.fecha_compromiso)}
+              </strong>
             </p>
           </div>
         )}
 
-        <div className="flex justify-end pt-3 border-t border-slate-100">
-          <Link
+        <div
+          className="flex justify-end pt-3"
+          style={{ borderTop: `1px solid ${UAGRM_TOKENS.border.subtle}` }}
+        >
+          <Button
+            variant="default"
+            component={Link}
             to={`/ordenes/${orden.id_orden}/consumo`}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs shadow hover:bg-emerald-700 transition"
+            icon={<CheckCircle2 size={16} />}
           >
-            <CheckCircle2 size={16} /> Registrar Consumo Real y Mermas
-          </Link>
+            Registrar Consumo Real y Mermas
+          </Button>
         </div>
       </div>
     </div>
-  )
+  );
 }
+export default OrdenDetallePage;
