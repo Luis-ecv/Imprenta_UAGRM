@@ -97,3 +97,4 @@ export const GraficoDemanda: React.FC = () => {
 };
 
 export default GraficoDemanda;
+

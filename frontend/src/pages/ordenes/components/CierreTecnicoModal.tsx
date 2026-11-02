@@ -264,3 +264,4 @@ export const CierreTecnicoModal: React.FC<CierreTecnicoModalProps> = ({
     </Modal>
   );
 };
+

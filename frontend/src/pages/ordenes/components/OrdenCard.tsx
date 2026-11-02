@@ -349,3 +349,4 @@ export const OrdenCard: React.FC<OrdenCardProps> = ({ orden, onAvanzar }) => {
     </Paper>
   );
 };
+
