@@ -5,38 +5,30 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Grid';
-import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
-import IconButton from '@mui/material/IconButton';
 import CircularProgress from '@mui/material/CircularProgress';
 import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
-import { alpha } from '@mui/material/styles';
 import {
   ArrowLeft,
   Check,
   FileText,
   Calculator,
-  Printer,
   Layers,
   Info,
-  X,
-  ExternalLink,
 } from 'lucide-react';
 
 import { proformasApi } from '@/api/proformas.api';
 import { clientesApi } from '@/api/clientes.api';
 import { tarifasApi, type TipoTrabajoResponse } from '@/api/tarifas.api';
-import { UAGRM_COLORS } from '@/theme/uagrmTheme';
-import type { ClienteResponse, Modalidad, ProformaResponse } from '@/types';
+import { UAGRM_TOKENS } from '@/theme/tokens';
+import { Button } from '@/components/ui';
+import type { ClienteResponse, Modalidad, ProformaResponse, ProformaCreate } from '@/types';
 import { formatearMoneda } from '@/utils/formatters';
-import { imprimirDocumentoHtml, abrirDocumentoEnPestana } from '@/utils/impresion';
+import { calcularCostosLitograficos } from '@/utils/calculoLitografico';
+import { ProformaPreviewModal } from './components';
 
 export function ProformaFormPage() {
   const navigate = useNavigate();
@@ -91,29 +83,11 @@ export function ProformaFormPage() {
     cargarDatos();
   }, []);
 
-  // Cálculo técnico paramétrico automático
-  const calculos = useMemo(() => {
-    const safeTiraje = Math.max(0, Number(tiraje) || 0);
-    const safePaginas = Math.max(0, Number(numeroPaginas) || 0);
-    // Pliegos = (Tiraje * Páginas) / 2 páginas por pliego doble cara
-    const hojas = Math.ceil((safeTiraje * safePaginas) / 2);
-
-    // Costo Papel: 0 si la modalidad es insumos_cliente
-    const costoPapel = modalidad === 'insumos_imprenta' ? Number((hojas * 0.45).toFixed(2)) : 0;
-    const costoTinta = Number((safeTiraje * safePaginas * 0.04).toFixed(2));
-    const costoPlanchas = 150 * 4; // 4 planchas CTP térmicas (CMYK) = 600 Bs
-    const costoManoObra = Number((50 + safeTiraje * 0.05).toFixed(2));
-    const total = Number((costoPapel + costoTinta + costoPlanchas + costoManoObra).toFixed(2));
-
-    return {
-      hojas,
-      costoPapel,
-      costoTinta,
-      costoPlanchas,
-      costoManoObra,
-      total,
-    };
-  }, [modalidad, tiraje, numeroPaginas]);
+  // Cálculo técnico paramétrico automático reutilizable
+  const calculos = useMemo(
+    () => calcularCostosLitograficos(modalidad, tiraje, numeroPaginas),
+    [modalidad, tiraje, numeroPaginas]
+  );
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -126,8 +100,7 @@ export function ProformaFormPage() {
       setGuardando(true);
       setError(null);
 
-      // El backend exige estrictamente paginas_totales
-      const payload = {
+      const payload: ProformaCreate = {
         cliente_id: Number(clienteId),
         modalidad,
         dias_vigencia: diasVigencia,
@@ -156,7 +129,7 @@ export function ProformaFormPage() {
         const html = await proformasApi.obtenerImpresionHtml(res.id_proforma);
         setHtmlDoc(html);
       } catch {
-        // En caso de que no cargue el HTML, el modal igual mostrará los datos de la proforma
+        setHtmlDoc('');
       } finally {
         setCargandoHtml(false);
       }
@@ -169,8 +142,9 @@ export function ProformaFormPage() {
         if (typeof detail === 'string') {
           setError(detail);
         } else if (Array.isArray(detail)) {
-          // Si FastAPI devuelve un arreglo de errores de validación, formatear a string para no romper React
-          const msgs = detail.map((d) => (typeof d === 'object' && d !== null && 'msg' in d ? (d as { msg: string }).msg : String(d)));
+          const msgs = detail.map((d) =>
+            typeof d === 'object' && d !== null && 'msg' in d ? (d as { msg: string }).msg : String(d)
+          );
           setError(msgs.join(', ') || 'Error de validación en la proforma.');
         } else {
           setError('Error al emitir la proforma litográfica.');
@@ -183,33 +157,11 @@ export function ProformaFormPage() {
     }
   }
 
-  const handleImprimir = () => {
-    if (htmlDoc) {
-      imprimirDocumentoHtml(htmlDoc);
-    } else if (proformaEmitida) {
-      proformasApi.obtenerImpresionHtml(proformaEmitida.id_proforma).then((h) => {
-        setHtmlDoc(h);
-        imprimirDocumentoHtml(h);
-      });
-    }
-  };
-
-  const handleAbrirPestana = () => {
-    if (htmlDoc) {
-      abrirDocumentoEnPestana(htmlDoc);
-    } else if (proformaEmitida) {
-      proformasApi.obtenerImpresionHtml(proformaEmitida.id_proforma).then((h) => {
-        setHtmlDoc(h);
-        abrirDocumentoEnPestana(h);
-      });
-    }
-  };
-
   if (cargandoMaestros) {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '50vh', gap: 2 }}>
-        <CircularProgress sx={{ color: UAGRM_COLORS.red.main }} />
-        <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 600 }}>
+        <CircularProgress sx={{ color: UAGRM_TOKENS.colors.ruby }} />
+        <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate, fontWeight: 600 }}>
           Cargando catálogos del sistema litográfico...
         </Typography>
       </Box>
@@ -217,32 +169,23 @@ export function ProformaFormPage() {
   }
 
   return (
-    <Box sx={{ p: { xs: 2, sm: 3, md: 3.5 }, backgroundColor: UAGRM_COLORS.background.default, minHeight: '100%' }}>
+    <Box sx={{ p: { xs: 2, sm: 3, md: 3.5 }, backgroundColor: UAGRM_TOKENS.background.default, minHeight: '100%' }}>
       {/* 1. Encabezado */}
       <Box sx={{ mb: 3.5 }}>
-        <Button
-          component={Link}
+        <Link
           to="/proformas"
-          startIcon={<ArrowLeft size={16} />}
-          sx={{
-            color: UAGRM_COLORS.red.main,
-            fontWeight: 700,
-            textTransform: 'none',
-            fontSize: '0.875rem',
-            p: 0,
-            mb: 1.5,
-            '&:hover': { backgroundColor: 'transparent', color: UAGRM_COLORS.red.dark },
-          }}
+          className="inline-flex items-center gap-2 text-sm font-bold mb-2 hover:opacity-80 transition"
+          style={{ color: UAGRM_TOKENS.colors.ruby }}
         >
-          Volver a Proformas
-        </Button>
+          <ArrowLeft size={16} /> Volver a Proformas
+        </Link>
 
         <Typography
           variant="overline"
           sx={{
             fontWeight: 800,
             letterSpacing: '0.12em',
-            color: UAGRM_COLORS.cyan.main,
+            color: UAGRM_TOKENS.colors.cyan,
             display: 'block',
             lineHeight: 1.2,
           }}
@@ -253,14 +196,14 @@ export function ProformaFormPage() {
           variant="h4"
           sx={{
             fontWeight: 780,
-            color: UAGRM_COLORS.blue.dark,
+            color: UAGRM_TOKENS.colors.primaryDark,
             letterSpacing: '-0.02em',
             mb: 0.5,
           }}
         >
           Crear Proforma / Factura Litográfica
         </Typography>
-        <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.925rem' }}>
+        <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate, fontSize: '0.925rem' }}>
           Calcula automáticamente el presupuesto institucional según pliegos de papel, tinta offset, planchas CTP y mano de obra.
         </Typography>
       </Box>
@@ -281,15 +224,15 @@ export function ProformaFormPage() {
               elevation={0}
               sx={{
                 borderRadius: 3,
-                border: `1px solid ${UAGRM_COLORS.border}`,
-                backgroundColor: '#ffffff',
+                border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
+                backgroundColor: UAGRM_TOKENS.colors.background.paper,
                 mb: 3,
               }}
             >
               <CardContent sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pb: 2, mb: 2.5, borderBottom: `1px solid ${UAGRM_COLORS.border}` }}>
-                  <FileText size={20} color={UAGRM_COLORS.red.main} />
-                  <Typography variant="h6" sx={{ fontWeight: 800, color: UAGRM_COLORS.blue.dark, fontSize: '1.05rem' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pb: 2, mb: 2.5, borderBottom: `1px solid ${UAGRM_TOKENS.border.subtle}` }}>
+                  <FileText size={20} color={UAGRM_TOKENS.colors.ruby} />
+                  <Typography variant="h6" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.primaryDark, fontSize: '1.05rem' }}>
                     Datos del Solicitante y Trabajo Litográfico
                   </Typography>
                 </Box>
@@ -345,7 +288,7 @@ export function ProformaFormPage() {
 
                   {/* Modalidad de Suministro */}
                   <Grid size={{ xs: 12 }}>
-                    <Typography variant="caption" sx={{ fontWeight: 800, color: '#475569', display: 'block', textTransform: 'uppercase', mb: 1 }}>
+                    <Typography variant="caption" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.charcoal, display: 'block', textTransform: 'uppercase', mb: 1 }}>
                       Modalidad de Suministro de Insumos *
                     </Typography>
 
@@ -356,17 +299,33 @@ export function ProformaFormPage() {
                           sx={{
                             p: 2,
                             borderRadius: 2.5,
-                            border: `2px solid ${modalidad === 'insumos_imprenta' ? UAGRM_COLORS.red.main : UAGRM_COLORS.border}`,
-                            backgroundColor: modalidad === 'insumos_imprenta' ? alpha(UAGRM_COLORS.red.main, 0.04) : '#ffffff',
+                            border: `2px solid ${
+                              modalidad === 'insumos_imprenta'
+                                ? UAGRM_TOKENS.colors.ruby
+                                : UAGRM_TOKENS.border.subtle
+                            }`,
+                            backgroundColor:
+                              modalidad === 'insumos_imprenta'
+                                ? UAGRM_TOKENS.colors.status.error.light
+                                : UAGRM_TOKENS.colors.background.paper,
                             cursor: 'pointer',
                             transition: 'all 0.2s ease',
-                            '&:hover': { borderColor: UAGRM_COLORS.red.main },
+                            '&:hover': { borderColor: UAGRM_TOKENS.colors.ruby },
                           }}
                         >
-                          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: modalidad === 'insumos_imprenta' ? UAGRM_COLORS.red.main : '#1e293b' }}>
+                          <Typography
+                            variant="subtitle2"
+                            sx={{
+                              fontWeight: 800,
+                              color:
+                                modalidad === 'insumos_imprenta'
+                                  ? UAGRM_TOKENS.colors.ruby
+                                  : UAGRM_TOKENS.colors.charcoal,
+                            }}
+                          >
                             Insumos de Imprenta
                           </Typography>
-                          <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mt: 0.5 }}>
+                          <Typography variant="caption" sx={{ color: UAGRM_TOKENS.colors.slate, display: 'block', mt: 0.5 }}>
                             La Imprenta Universitaria provee el papel y todos los materiales.
                           </Typography>
                         </Box>
@@ -378,17 +337,33 @@ export function ProformaFormPage() {
                           sx={{
                             p: 2,
                             borderRadius: 2.5,
-                            border: `2px solid ${modalidad === 'insumos_cliente' ? UAGRM_COLORS.red.main : UAGRM_COLORS.border}`,
-                            backgroundColor: modalidad === 'insumos_cliente' ? alpha(UAGRM_COLORS.red.main, 0.04) : '#ffffff',
+                            border: `2px solid ${
+                              modalidad === 'insumos_cliente'
+                                ? UAGRM_TOKENS.colors.ruby
+                                : UAGRM_TOKENS.border.subtle
+                            }`,
+                            backgroundColor:
+                              modalidad === 'insumos_cliente'
+                                ? UAGRM_TOKENS.colors.status.error.light
+                                : UAGRM_TOKENS.colors.background.paper,
                             cursor: 'pointer',
                             transition: 'all 0.2s ease',
-                            '&:hover': { borderColor: UAGRM_COLORS.red.main },
+                            '&:hover': { borderColor: UAGRM_TOKENS.colors.ruby },
                           }}
                         >
-                          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: modalidad === 'insumos_cliente' ? UAGRM_COLORS.red.main : '#1e293b' }}>
+                          <Typography
+                            variant="subtitle2"
+                            sx={{
+                              fontWeight: 800,
+                              color:
+                                modalidad === 'insumos_cliente'
+                                  ? UAGRM_TOKENS.colors.ruby
+                                  : UAGRM_TOKENS.colors.charcoal,
+                            }}
+                          >
                             Insumos del Cliente
                           </Typography>
-                          <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mt: 0.5 }}>
+                          <Typography variant="caption" sx={{ color: UAGRM_TOKENS.colors.slate, display: 'block', mt: 0.5 }}>
                             Papel provisto por el cliente (costo de papel fijado en 0.00 Bs).
                           </Typography>
                         </Box>
@@ -452,69 +427,73 @@ export function ProformaFormPage() {
               elevation={0}
               sx={{
                 borderRadius: 3,
-                border: `1px solid ${UAGRM_COLORS.border}`,
-                backgroundColor: '#ffffff',
+                border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
+                backgroundColor: UAGRM_TOKENS.colors.background.paper,
                 boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
                 position: { lg: 'sticky' },
                 top: { lg: 96 },
               }}
             >
               <CardContent sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 2, mb: 2.5, borderBottom: `1px solid ${UAGRM_COLORS.border}` }}>
-                  <Typography variant="h6" sx={{ fontWeight: 800, color: UAGRM_COLORS.blue.dark, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Calculator size={18} color={UAGRM_COLORS.red.main} />
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 2, mb: 2.5, borderBottom: `1px solid ${UAGRM_TOKENS.border.subtle}` }}>
+                  <Typography variant="h6" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.primaryDark, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Calculator size={18} color={UAGRM_TOKENS.colors.ruby} />
                     Desglose Técnico
                   </Typography>
                   <Chip
                     label={`${calculos.hojas} pliegos`}
                     size="small"
-                    sx={{ fontWeight: 700, backgroundColor: '#f1f5f9', color: '#475569' }}
+                    sx={{
+                      fontWeight: 700,
+                      backgroundColor: UAGRM_TOKENS.colors.background.subtle,
+                      color: UAGRM_TOKENS.colors.charcoal,
+                    }}
                   />
                 </Box>
 
                 <Stack spacing={2} sx={{ mb: 3 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.875rem' }}>
-                    <Typography variant="body2" sx={{ color: '#64748b', display: 'flex', alignItems: 'center', gap: 0.8 }}>
-                      <Layers size={14} color="#94a3b8" />
+                    <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate, display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                      <Layers size={14} color={UAGRM_TOKENS.colors.mutedSlate} />
                       Papel ({modalidad === 'insumos_imprenta' ? 'Imprenta' : 'Cliente'}):
                     </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#1e293b' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: UAGRM_TOKENS.colors.charcoal }}>
                       {formatearMoneda(calculos.costoPapel)}
                     </Typography>
                   </Box>
 
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.875rem' }}>
-                    <Typography variant="body2" sx={{ color: '#64748b' }}>
+                    <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate }}>
                       Tinta Offset CMYK:
                     </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#1e293b' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: UAGRM_TOKENS.colors.charcoal }}>
                       {formatearMoneda(calculos.costoTinta)}
                     </Typography>
                   </Box>
 
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.875rem' }}>
-                    <Typography variant="body2" sx={{ color: '#64748b' }}>
+                    <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate }}>
                       Planchas CTP (4 juegos):
                     </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#1e293b' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: UAGRM_TOKENS.colors.charcoal }}>
                       {formatearMoneda(calculos.costoPlanchas)}
                     </Typography>
                   </Box>
 
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.875rem' }}>
-                    <Typography variant="body2" sx={{ color: '#64748b' }}>
+                    <Typography variant="body2" sx={{ color: UAGRM_TOKENS.colors.slate }}>
                       Mano de obra y prensa:
                     </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#1e293b' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: UAGRM_TOKENS.colors.charcoal }}>
                       {formatearMoneda(calculos.costoManoObra)}
                     </Typography>
                   </Box>
 
-                  <Box sx={{ pt: 2, borderTop: `1px solid ${UAGRM_COLORS.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 800, color: UAGRM_COLORS.blue.dark }}>
+                  <Box sx={{ pt: 2, borderTop: `1px solid ${UAGRM_TOKENS.border.subtle}`, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.primaryDark }}>
                       Total Cotizado:
                     </Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 800, color: UAGRM_COLORS.red.main }}>
+                    <Typography variant="h5" sx={{ fontWeight: 800, color: UAGRM_TOKENS.colors.ruby }}>
                       {formatearMoneda(calculos.total)}
                     </Typography>
                   </Box>
@@ -524,43 +503,19 @@ export function ProformaFormPage() {
                   <Button
                     fullWidth
                     type="submit"
-                    variant="contained"
+                    variant="default"
                     disabled={guardando}
-                    endIcon={guardando ? <CircularProgress size={18} color="inherit" /> : <Check size={18} />}
-                    sx={{
-                      backgroundColor: '#1e2b4d',
-                      color: '#ffffff',
-                      fontWeight: 700,
-                      py: 1.3,
-                      borderRadius: 2.5,
-                      textTransform: 'none',
-                      fontSize: '0.95rem',
-                      boxShadow: '0 4px 14px rgba(30, 43, 77, 0.28)',
-                      '&:hover': { backgroundColor: '#141d34' },
-                      '&.Mui-disabled': {
-                        backgroundColor: '#1e2b4d',
-                        color: '#ffffff',
-                        opacity: 0.65,
-                      },
-                    }}
+                    isLoading={guardando}
+                    icon={<Check size={18} />}
                   >
-                    {guardando ? 'Confirmando...' : 'Confirmar'}
+                    Confirmar
                   </Button>
                   <Button
                     fullWidth
+                    variant="outline"
                     component={Link}
                     to="/proformas"
                     disabled={guardando}
-                    sx={{
-                      backgroundColor: '#607285',
-                      color: '#ffffff',
-                      fontWeight: 700,
-                      py: 1.1,
-                      borderRadius: 50.5,
-                      textTransform: 'none',
-                      fontSize: '0.875rem',
-                      '&:hover': { backgroundColor: '#4f5e6d' },
-                    }}
                   >
                     Cancelar
                   </Button>
@@ -571,118 +526,18 @@ export function ProformaFormPage() {
         </Grid>
       </form>
 
-      {/* 2. POPUP MODAL: VISTA PREVIA Y FACTURA OFICIAL EMITIDA (SIN HOJA EN BLANCO) */}
-      <Dialog
+      {/* Modal Popup de Vista Previa Reutilizable */}
+      <ProformaPreviewModal
         open={modalPreviewAbierto}
-        onClose={() => setModalPreviewAbierto(false)}
-        maxWidth="md"
-        fullWidth
-        slotProps={{
-          paper: {
-            sx: {
-              borderRadius: 3.5,
-              p: 1,
-              maxHeight: '90vh',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-            },
-          },
+        proforma={proformaEmitida}
+        htmlDoc={htmlDoc}
+        cargandoHtml={cargandoHtml}
+        onClose={() => {
+          setModalPreviewAbierto(false);
+          navigate('/proformas');
         }}
-      >
-        <DialogTitle sx={{ pb: 1, pt: 2, px: 2.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Box>
-            <Typography variant="overline" sx={{ fontWeight: 800, color: UAGRM_COLORS.cyan.main, letterSpacing: '0.1em' }}>
-              Documento Oficial Registrado
-            </Typography>
-            <Typography variant="h6" sx={{ fontWeight: 800, color: UAGRM_COLORS.blue.dark }}>
-              {proformaEmitida ? `Proforma ${proformaEmitida.codigo_proforma}` : 'Documento Emitido'}
-            </Typography>
-          </Box>
-          <IconButton onClick={() => setModalPreviewAbierto(false)} size="small">
-            <X size={18} />
-          </IconButton>
-        </DialogTitle>
-
-        <DialogContent sx={{ px: 2.5, py: 1.5 }}>
-          {cargandoHtml ? (
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 8 }}>
-              <CircularProgress sx={{ color: UAGRM_COLORS.red.main, mb: 2 }} />
-              <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 600 }}>
-                Generando formato imprimible institucional...
-              </Typography>
-            </Box>
-          ) : htmlDoc ? (
-            <Box
-              sx={{
-                width: '100%',
-                height: 480,
-                border: `1px solid ${UAGRM_COLORS.border}`,
-                borderRadius: 2,
-                overflow: 'hidden',
-                backgroundColor: '#ffffff',
-              }}
-            >
-              <iframe
-                title="Vista previa de proforma oficial"
-                srcDoc={htmlDoc}
-                style={{ width: '100%', height: '100%', border: 'none' }}
-              />
-            </Box>
-          ) : (
-            <Alert severity="success" sx={{ borderRadius: 2 }}>
-              ¡La proforma fue emitida exitosamente en el sistema con código{' '}
-              <strong>{proformaEmitida?.codigo_proforma}</strong> por un total de{' '}
-              <strong>{formatearMoneda(proformaEmitida?.total_presupuesto || calculos.total)}</strong>!
-            </Alert>
-          )}
-        </DialogContent>
-
-        <DialogActions sx={{ p: 2.5, pt: 1.5, borderTop: `1px solid ${UAGRM_COLORS.border}`, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-          <Button
-            onClick={() => {
-              setModalPreviewAbierto(false);
-              navigate('/proformas');
-            }}
-            sx={{ color: '#64748b', fontWeight: 600, textTransform: 'none' }}
-          >
-            Ver en Listado de Proformas
-          </Button>
-
-          <Stack direction="row" spacing={1.5}>
-            <Button
-              variant="outlined"
-              startIcon={<ExternalLink size={16} />}
-              onClick={handleAbrirPestana}
-              sx={{
-                borderColor: UAGRM_COLORS.border,
-                color: UAGRM_COLORS.blue.main,
-                fontWeight: 700,
-                textTransform: 'none',
-                borderRadius: 2,
-                '&:hover': { backgroundColor: '#f8fafc' },
-              }}
-            >
-              Ver en Pestaña
-            </Button>
-
-            <Button
-              variant="contained"
-              startIcon={<Printer size={16} />}
-              onClick={handleImprimir}
-              sx={{
-                backgroundColor: UAGRM_COLORS.red.main,
-                color: '#ffffff',
-                fontWeight: 700,
-                px: 2.5,
-                textTransform: 'none',
-                borderRadius: 2,
-                '&:hover': { backgroundColor: UAGRM_COLORS.red.dark },
-              }}
-            >
-              Imprimir Oficial
-            </Button>
-          </Stack>
-        </DialogActions>
-      </Dialog>
+      />
     </Box>
   );
 }
+export default ProformaFormPage;
