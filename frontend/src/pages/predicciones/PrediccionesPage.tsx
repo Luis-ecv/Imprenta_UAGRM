@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -21,10 +21,11 @@ import {
 import { usePredicciones } from '@/hooks/usePredicciones';
 import { useAlertas } from '@/hooks/useAlertas';
 import { Button, Table, KpiCard, Badge, type Column } from '@/components/ui';
-import { GraficoDemanda, MetricasMLCard } from './components';
+import { GraficoDemanda, MetricasMLCard, ReportePredictivoPreviewModal } from './components';
 import { UAGRM_TOKENS } from '@/theme/tokens';
 import type { PrediccionDemandaResponse } from '@/types';
 import { formatearFecha } from '@/utils/formatters';
+import { generarHtmlReportePrediccion } from '@/utils/documentoPrediccionHtml';
 
 export function PrediccionesPage() {
   const navigate = useNavigate();
@@ -51,6 +52,20 @@ export function PrediccionesPage() {
     estimarDemanda,
     reentrenarModelo,
   } = usePredicciones();
+
+  const [modalExportarAbierto, setModalExportarAbierto] = useState<boolean>(false);
+  const [htmlReporte, setHtmlReporte] = useState<string>('');
+
+  const handleAbrirExportar = () => {
+    const html = generarHtmlReportePrediccion({
+      insumo: insumoActual,
+      prediccion: prediccionActual,
+      periodoNombre,
+      historial: historialPredicciones,
+    });
+    setHtmlReporte(html);
+    setModalExportarAbierto(true);
+  };
 
   const handleCrearOrdenSugerida = () => {
     if (!prediccionActual || !insumoActual) return;
@@ -152,7 +167,7 @@ export function PrediccionesPage() {
         <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
           <Button
             variant="outline"
-            onClick={() => window.print()}
+            onClick={handleAbrirExportar}
             icon={<Printer size={16} />}
           >
             Exportar
@@ -316,6 +331,14 @@ export function PrediccionesPage() {
           emptyMessage="No existen registros previos de inferencia para este insumo. Presione «Calcular Predicción ML» para generar una nueva."
         />
       </Box>
+
+      {/* Modal de Vista Previa Oficial e Impresión de Reporte ML */}
+      <ReportePredictivoPreviewModal
+        open={modalExportarAbierto}
+        htmlDoc={htmlReporte}
+        insumoNombre={insumoActual ? `${insumoActual.codigo} - ${insumoActual.descripcion}` : undefined}
+        onClose={() => setModalExportarAbierto(false)}
+      />
     </Box>
   );
 }
