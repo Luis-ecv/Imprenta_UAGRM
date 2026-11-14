@@ -15,14 +15,16 @@ import {
   Building2,
   DollarSign,
   Clock,
+  Printer,
 } from 'lucide-react';
 
 import { useCompras } from '@/hooks/useCompras';
 import { Button, Table, FilterTabs, SearchInput, KpiCard, Badge, type Column } from '@/components/ui';
-import { NuevaCompraModal } from './components';
+import { NuevaCompraModal, CompraPreviewModal } from './components';
 import { UAGRM_TOKENS } from '@/theme/tokens';
 import type { OrdenCompraResponse, OrdenCompraCreate } from '@/types';
 import { formatearMoneda, formatearFecha } from '@/utils/formatters';
+import { generarHtmlOrdenCompra } from '@/utils/documentoCompraHtml';
 
 export function ComprasPage() {
   const {
@@ -45,6 +47,16 @@ export function ComprasPage() {
 
   const [modalAbierto, setModalAbierto] = useState<boolean>(false);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
+  const [compraSeleccionada, setCompraSeleccionada] = useState<OrdenCompraResponse | null>(null);
+  const [modalImprimirAbierto, setModalImprimirAbierto] = useState<boolean>(false);
+  const [htmlImpresion, setHtmlImpresion] = useState<string>('');
+
+  const handleAbrirImpresion = (item: OrdenCompraResponse) => {
+    const html = generarHtmlOrdenCompra(item, item.proveedor);
+    setCompraSeleccionada(item);
+    setHtmlImpresion(html);
+    setModalImprimirAbierto(true);
+  };
 
   const abrirModalCrear = () => {
     cargarProveedores();
@@ -157,29 +169,52 @@ export function ComprasPage() {
         id: 'acciones',
         label: 'ACCIONES',
         align: 'right',
-        width: 100,
+        width: 110,
         render: (item) => (
-          <Tooltip title="Ver detalles y trazabilidad de la orden">
-            <IconButton
-              component={Link}
-              to={`/compras/${item.id_orden_compra}`}
-              size="small"
-              sx={{
-                width: 36,
-                height: 36,
-                borderRadius: 2,
-                border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
-                backgroundColor: UAGRM_TOKENS.colors.background.paper,
-                color: UAGRM_TOKENS.colors.charcoal,
-                '&:hover': {
-                  backgroundColor: UAGRM_TOKENS.colors.background.subtle,
-                  color: UAGRM_TOKENS.colors.primaryDark,
-                },
-              }}
-            >
-              <Eye size={16} />
-            </IconButton>
-          </Tooltip>
+          <Stack direction="row" spacing={0.75} sx={{ justifyContent: 'flex-end' }}>
+            <Tooltip title="Ver detalles y trazabilidad de la orden">
+              <IconButton
+                component={Link}
+                to={`/compras/${item.id_orden_compra}`}
+                size="small"
+                sx={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 2,
+                  border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
+                  backgroundColor: UAGRM_TOKENS.colors.background.paper,
+                  color: UAGRM_TOKENS.colors.charcoal,
+                  '&:hover': {
+                    backgroundColor: UAGRM_TOKENS.colors.background.subtle,
+                    color: UAGRM_TOKENS.colors.primaryDark,
+                  },
+                }}
+              >
+                <Eye size={16} />
+              </IconButton>
+            </Tooltip>
+
+            <Tooltip title="Imprimir / Ver Comprobante Oficial">
+              <IconButton
+                onClick={() => handleAbrirImpresion(item)}
+                size="small"
+                sx={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 2,
+                  border: `1px solid ${UAGRM_TOKENS.border.subtle}`,
+                  backgroundColor: UAGRM_TOKENS.colors.background.paper,
+                  color: UAGRM_TOKENS.colors.charcoal,
+                  '&:hover': {
+                    backgroundColor: UAGRM_TOKENS.colors.background.subtle,
+                    color: UAGRM_TOKENS.colors.primaryDark,
+                  },
+                }}
+              >
+                <Printer size={16} />
+              </IconButton>
+            </Tooltip>
+          </Stack>
         ),
       },
     ],
@@ -310,6 +345,17 @@ export function ComprasPage() {
         guardando={guardando}
         onClose={() => setModalAbierto(false)}
         onSubmit={handleCrearCompra}
+      />
+
+      {/* Modal de Vista Previa Oficial e Impresión */}
+      <CompraPreviewModal
+        open={modalImprimirAbierto}
+        compra={compraSeleccionada}
+        htmlDoc={htmlImpresion}
+        onClose={() => {
+          setModalImprimirAbierto(false);
+          setCompraSeleccionada(null);
+        }}
       />
     </Box>
   );

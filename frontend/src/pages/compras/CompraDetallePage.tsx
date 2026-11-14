@@ -25,6 +25,8 @@ import { Button, Badge, Modal } from '@/components/ui';
 import { UAGRM_TOKENS } from '@/theme/tokens';
 import type { OrdenCompraResponse } from '@/types';
 import { formatearMoneda, formatearFecha } from '@/utils/formatters';
+import { CompraPreviewModal } from './components';
+import { generarHtmlOrdenCompra } from '@/utils/documentoCompraHtml';
 
 const PASOS = [
   { clave: 'SUGERIDA', numero: 1, etiqueta: 'Sugerida' },
@@ -42,7 +44,16 @@ export function CompraDetallePage() {
 
   const [tabActiva, setTabActiva] = useState<'resumen' | 'detalle' | 'avance'>('resumen');
   const [modalCancelarAbierto, setModalCancelarAbierto] = useState<boolean>(false);
+  const [modalImprimirAbierto, setModalImprimirAbierto] = useState<boolean>(false);
+  const [htmlImpresion, setHtmlImpresion] = useState<string>('');
   const [procesando, setProcesando] = useState<boolean>(false);
+
+  const handleAbrirImpresion = () => {
+    if (!compra) return;
+    const html = generarHtmlOrdenCompra(compra, compra.proveedor);
+    setHtmlImpresion(html);
+    setModalImprimirAbierto(true);
+  };
 
   const cargarCompra = useCallback(async () => {
     if (!id) return;
@@ -605,7 +616,7 @@ export function CompraDetallePage() {
                 <Button
                   variant="outline"
                   fullWidth
-                  onClick={() => window.print()}
+                  onClick={handleAbrirImpresion}
                   icon={<Printer size={16} />}
                 >
                   Imprimir Comprobante
@@ -689,6 +700,14 @@ export function CompraDetallePage() {
           ¿Está seguro de que desea cancelar la <strong>Orden de Compra #OC-{compra.id_orden_compra}</strong>? Esta acción actualizará el estado a CANCELADA en el servidor institucional.
         </Typography>
       </Modal>
+
+      {/* Modal de Vista Previa Oficial e Impresión */}
+      <CompraPreviewModal
+        open={modalImprimirAbierto}
+        compra={compra}
+        htmlDoc={htmlImpresion}
+        onClose={() => setModalImprimirAbierto(false)}
+      />
     </Box>
   );
 }
