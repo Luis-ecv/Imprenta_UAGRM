@@ -45,8 +45,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    volumes:
+      # Volumen persistente para los modelos Machine Learning entrenados
+      - ./backend/ml_models:/app/ml_models
     ports:
-      - "8000:8000"
+      # Expuesto solo al localhost del host (por seguridad, el acceso exterior entra por Nginx)
+      - "127.0.0.1:8000:8000"
     env_file:
       - .env
     networks:
@@ -65,6 +69,7 @@ services:
       - backend
     ports:
       - "80:80"
+      - "443:443"
     networks:
       - imprenta_net
 
