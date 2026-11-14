@@ -125,5 +125,12 @@ docker-compose.override.yml
 *.temp
 .cache/
 
+# =============================================
+# DOCUMENTACIÓN Y SCRIPTS TEMPORALES DE TESIS
+# =============================================
+*.docx
+*.doc
+scratch/
+
 # Notas y guías de trabajo locales personales
 GUIA_GIT_FLUJO_TRABAJO.md
