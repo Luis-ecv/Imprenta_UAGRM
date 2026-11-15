@@ -32,11 +32,24 @@ class AccesoDenegado(HTTPException):
 class CredencialesInvalidas(HTTPException):
     """Usuario o contraseña incorrectos en el proceso de autenticación."""
 
-    def __init__(self):
+    def __init__(self, mensaje: str = "Credenciales incorrectas."):
         super().__init__(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Credenciales incorrectas.",
+            detail=mensaje,
             headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
+class CuentaBloqueadaPorFuerzaBruta(HTTPException):
+    """Demasiados intentos fallidos de inicio de sesión."""
+
+    def __init__(self, minutos_restantes: int = 15):
+        super().__init__(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=(
+                f"Demasiados intentos fallidos. Por seguridad, "
+                f"intente nuevamente en {minutos_restantes} minuto(s)."
+            ),
         )
 
 

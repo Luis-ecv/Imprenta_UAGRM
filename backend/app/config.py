@@ -71,6 +71,12 @@ class Settings(BaseSettings):
     ML_MODEL_PATH: str = "./ml_models/"
     ML_MIN_RECORDS_FOR_TRAINING: int = 50
 
+    # =========================================================================
+    # Seguridad y Control de Fuerza Bruta
+    # =========================================================================
+    MAX_LOGIN_ATTEMPTS: int = 5
+    LOGIN_LOCKOUT_MINUTES: int = 15
+
 
 # Instancia global de configuración
 settings = Settings()

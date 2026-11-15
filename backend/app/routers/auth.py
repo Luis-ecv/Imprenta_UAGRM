@@ -2,7 +2,7 @@
 Router de Autenticación.
 Endpoints públicos para login y perfil.
 """
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.schemas.auth import LoginRequest, TokenResponse, UsuarioAutenticado
@@ -15,10 +15,12 @@ router = APIRouter(prefix="/auth")
 @router.post("/login", response_model=TokenResponse, summary="Iniciar sesión")
 async def login(
     datos: LoginRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     """Autentica al usuario con email y contraseña. Retorna un JWT válido."""
-    return await auth_service.autenticar(db, datos)
+    ip_cliente = request.client.host if request.client else "127.0.0.1"
+    return await auth_service.autenticar(db, datos, ip_cliente)
 
 
 @router.get("/me", response_model=UsuarioAutenticado, summary="Obtener usuario autenticado")

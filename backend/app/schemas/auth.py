@@ -1,13 +1,13 @@
 """
 Schemas de autenticación: login, tokens y datos del usuario autenticado.
 """
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 
 class LoginRequest(BaseModel):
     """Credenciales para inicio de sesión en mostrador/sistema."""
     email: EmailStr
-    password: str
+    password: str = Field(..., max_length=25, description="Contraseña no mayor a 25 caracteres")
 
 
 class TokenResponse(BaseModel):

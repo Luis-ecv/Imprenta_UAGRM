@@ -125,5 +125,10 @@ docker-compose.override.yml
 *.temp
 .cache/
 
+# =============================================
+# AGENTES E INSTRUCCIONES LOCALES
+# =============================================
+.agents/
+
 # Notas y guías de trabajo locales personales
 GUIA_GIT_FLUJO_TRABAJO.md
